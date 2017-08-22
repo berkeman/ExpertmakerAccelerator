@@ -1,0 +1,164 @@
+\documentclass[a4paper]{article}
+
+\addtolength{\topmargin}{-2cm}
+\addtolength{\textheight}{2cm}
+\addtolength{\textwidth}{1cm}
+\addtolength{\oddsidemargin}{-0.5cm}
+
+\title{The Expertmaker Accelerator\\[1ex]\large{Processing one Billion Lines of Data per Second on a
+  Single PC}\\\Large{--- Abstract ---}}
+
+\author{A.\,Berkeman, C.\,Drougge, and S.\,H\"orberg}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+% Your 1-page abstract should include:
+
+% Motivation: Why do we care about the problem and the results?
+
+% Problem statement: What problem are you trying to solve? What is
+%   the scope of your work (a generalized approach, or for a specific
+%   situation)?
+
+% Approach: How did you go about solving or making progress on
+%   the problem? Did you use simulation, analytic models,
+%   prototype construction, or analysis of field data for an
+%   actual product? What was the extent of your work (did you look
+%   at one application program or a hundred programs in twenty
+%   different programming languages?) What important variables did
+%   you control, ignore, or measure?
+
+% Results: What's the answer?
+%   Conclusions: What are the implications of your answer? Is
+%   it going to change the world (unlikely), be a significant
+%   ``win'', be a nice hack, or simply serve as a road sign
+%   indicating that this path is a waste of time (all of the
+%   previous results are useful). Are your results general,
+%   potentially generalizable, or specific to a particular
+%   case?
+            
+
+\subsection*{What It Is}
+The Expertmaker Accelerator is a tool for processing big data.  It has
+a small footprint and low overhead, and provides a number of
+interesting features, most notably very fast data access and a novel
+scheme to store, retrieve, and reuse computations.  It has been used
+in commercial projects since 2012.
+
+\subsection*{Motivation and Approach}
+Processing big data is potentially both time consuming and resource
+hungry.  This is addressed in the Accelerator design by the following
+two tenets:
+\begin{itemize}
+\item[1.] Modern computers are very powerful.\\  Significant effort has
+  been spent to come close to the theoretical performance limits set
+  by modern hardware.  Critical parts are written in the C Programming
+  Language, and the Accelerator has very fast data streaming from disk
+  to CPU cores.
+
+\item[2.] Results are valuable, they should be easy to retrieve and
+  re-use.\\ The Accelerator connects each computed result to the
+  source code that was running, the input data used, and the set of
+  input parameters.  This connection makes it possible for the
+  Accelerator to automatically retrieve results instead of
+  re-computing them, which saves time.  It also brings full
+  transparency in that all work can be trivially traced back to its
+  origins.
+\end{itemize}
+
+
+
+\subsection*{Results}
+The Accelerator has been proven in a number of commercial projects.
+At eBay it is currently used to aggregate products from listings.
+Here are some performance figures
+\begin{itemize}
+\item[1.]  \textbf{Sum all values in a column:\hfill 1000 million rows/second.}\\
+  Adding up all transaction amounts.  \textsl{All} of eBay's
+  transactions added in 17 seconds.
+\item[2.]  \textbf{Count unique strings\hfill  300 million rows/second.}\\
+Count all 150 million MPNs (a product identifier) in a dataset of 6.3
+billion rows.
+\item[3.]  \textbf{Complex append a column.:\hfill 80 million rows/second}.\\
+  For each row, \textsl{read} three columns, multiply their values,
+  and \textsl{write} to a new column (on disk).
+\end{itemize}
+
+\noindent These results are achieved on a single Krylov-type instance with
+72~CPU cores and 1TB RAM.
+
+
+
+
+% \clearpage
+
+% What it is
+
+% \subsection*{Job Recording}
+
+% The Accelerator will remember all computed results.  There are two
+% main reasons for this.  The first is that old results can be retrieved
+% easily instead of being recomputed, which saves time and helps
+% structuring analysis work results.  The second reason is that this
+% encourages iterative development, where each new job depends on the
+% results of one or more previous jobs.  Apart from being an attractive
+% and fast development strategy, this helps in tracking and debugging
+% and really speeds things up.
+
+% Result storage is achieved by recording the connections between
+% computed results and everything that was input to the computation,
+% i.e.
+
+% \begin{centering}
+% result $\leftarrow$ data + source code + options + execution\_time\\
+% \end{centering}
+
+% If the same combination of input conditions are presented to the
+% Accelerator again, it will check if there is a connection to a
+% successfully completed job, and if there is it will return a pointer
+% to that job's output.
+
+% \subsection*{Fast streaming}
+% The Acceleator stores data very efficiently in datastructures called
+% \texttt{datasets}.  These are optimized for very fast streamed reading
+% and writing.  Streamed data access is different from traditional
+% database random access, and yields much higher performance in
+% applications where a significant part of all data is being processed.
+% The dataset optimizes for throughput, minimized number of disk seeks,
+% and zero-overhead append of rows and columns.
+
+
+
+% What it may be used for.
+
+
+% The Accelerator connects a computed results to the source code used,
+% the input data, and input options.  A job will be run only once, so
+% trying to re-execute something that has completed successfully will
+% result in the immediate return of the result computed the first time.
+
+
+
+% The Accelerator is a tool for processing big data that has been in
+% commercial use since 2012.  It is designed for both analysis and
+% production work.  Key features include
+% \begin{itemize}
+% \item[] Very high speed data streaming from storage to CPUs.
+% \item[] Storage and recall of all previously successfully computed jobs.
+% \end{itemize}
+% In combination, these features are extremely useful for both analysis
+% and production tasks.  Storage and recall means that all computations
+% are traceable, so that every computed result could be followed back to
+% all used input data.  This is useful in production for debugging and
+% validation.  It is also very useful in analysis work, since results
+% are automatically connected to the input data and source code that was
+% used when computing the result.  This automatic connection of results,
+% code, and input data eliminates the need to manually storing under
+% what conditions a result was maintained.  Also, a change of any input
+% data or source code will automatically make the computations affected,
+% and only those, by the change to be recomputed.
+
+\end{document}
