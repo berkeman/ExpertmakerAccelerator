@@ -1,2 +1,5 @@
-doc.pdf: doc.tex
+doc.pdf: .figures doc.tex
 	pdflatex doc.tex
+
+.figures:
+	cd figures && make

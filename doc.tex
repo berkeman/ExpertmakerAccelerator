@@ -1,10 +1,13 @@
 \documentclass[a4paper]{article}
 
-\addtolength{\topmargin}{-2cm}
-\addtolength{\textheight}{2cm}
-\addtolength{\textwidth}{1cm}
-\addtolength{\oddsidemargin}{-0.5cm}
+%\addtolength{\topmargin}{-2cm}
+%\addtolength{\textheight}{2cm}
+%\addtolength{\textwidth}{1cm}
+%\addtolength{\oddsidemargin}{-0.5cm}
 
+
+%\usepackage{epsfig,color}
+\usepackage[pdftex]{graphicx,color}
 \title{The Expertmaker Accelerator\\[1ex]\large{Processing one Billion Lines of Data per Second on a
   Single PC}\\\Large{--- Abstract ---}}
 
@@ -14,6 +17,16 @@
 \begin{document}
 \maketitle
 \thispagestyle{empty}
+
+\begin{figure}[h]
+  \begin{center}
+    \input{figures/test.pdftex_t} %the difference is just this part
+    \caption{caption here}
+    \label{figure:example}
+  \end{center}
+\end{figure}
+
+
 
 % Your 1-page abstract should include:
 
@@ -48,17 +61,20 @@ interesting features, most notably very fast data access and a novel
 scheme to store, retrieve, and reuse computations.  It has been used
 in commercial projects since 2012.
 
+\subsection*{Background}
+vad den anvants till, hur den utvecklats osv
+
 \subsection*{Motivation and Approach}
 Processing big data is potentially both time consuming and resource
 hungry.  This is addressed in the Accelerator design by the following
-two tenets:
+two principles:
 \begin{itemize}
-\item[1.] Modern computers are very powerful.\\  Significant effort has
-  been spent to come close to the theoretical performance limits set
-  by modern hardware.  Critical parts are written in the C Programming
-  Language, and the Accelerator has very fast data streaming from disk
-  to CPU cores.
-
+\item[1.] Modern computers are very powerful.\\ The Accelerator has
+  very vast data streaming from disk to CPU cores.  Critical parts are
+  written in the C programming language, and effort has been spent to
+  come close to the theoretical performance limits set by modern
+  hardware.
+  
 \item[2.] Results are valuable, they should be easy to retrieve and
   re-use.\\ The Accelerator connects each computed result to the
   source code that was running, the input data used, and the set of
@@ -69,6 +85,173 @@ two tenets:
   origins.
 \end{itemize}
 
+\clearpage
+\section{Functionality: Jobs}
+Let's start with a very simple example.  Assume that we are to analyse
+a system's log files.  The log files are in CSV-format, and there is a
+new log-file present every hour.  For the case of simplicity, assume
+the files are named like this
+
+\begin{tabular}{l}
+  \texttt{log\_03:00.txt}\\
+  \texttt{log\_04:00.txt}\\
+  \texttt{log\_05:00.txt}\\
+  $\dots$
+\end{tabular}
+
+\noindent The first step would be to import the files.  This is done
+using the \texttt{csvimport} method.  This method takes an input
+filename as an option.  Optionally, it can also take the jobid of a
+previous job as input.  Using a simple for-loop, we can have each
+csvimport fed with the jobid of the previous import job, like in
+figure.
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/csvimport_chain.pdftex_t}
+    \caption{caption here}
+    \label{figure:example}
+  \end{center}
+\end{figure}
+The figure shows three jobs, \texttt{job\_0} to \texttt{job\_2}, each
+of which has executed the \texttt{csvimport} method.  If we loop at
+the arrows for a minute, we see that for example \texttt{job\_2}
+points to \texttt{job\_1}.  This means that \texttt{job\_2} is aware
+that \texttt{job\_1} is its \textsl{previous} job.  In all, there are
+three jobs in this \textsl{chain}.  We can also see that
+\texttt{job\_1} points to the input file \texttt{log\_04:00.txt},
+which means that the job is aware that this is the filename that was
+input to the method when executed.  Note the direction of the arrows.
+By looking at a single job, we can follow the arrows out and see what
+the job is aware of/linked to.
+
+Now, we're ready to do some analysis.  We want to analyse the latest
+data, so we run our \texttt{log\_analysis} method with the latest
+import job as input, see figure.
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/import_analysis.pdftex_t}
+    \caption{caption here}
+    \label{figure:example}
+  \end{center}
+\end{figure}
+The analysis job gets jobid \texttt{job\_3}, and it is aware of
+\texttt{job\_2}, which is the last imported log file.
+
+Inside the analysis method, there is a choice of how to iterate the
+input data.  It can either loop over the data stored in
+\texttt{job\_2}, which is the only data-containing job it is aware of,
+or it can iterate over the whole chain of datasets endind at
+\texttt{job\_2} all the way back to \texttt{job\_0}.  It is also
+possible to iterate over some of the jobs in the chain.
+
+In the figure, we can also see markers in blue of the form
+\texttt{[name@timestamp]}.  These are storage markers used by the
+\textsl{Urd} job tracking system.  Urd is something like a database
+storing information about all jobs being executed on the system.  In
+this case, there is a set of jobs tagged with \texttt{import} for
+three different timestamps (\texttt{03:00}, \texttt{04:00},
+\texttt{05:00}).  There is also a tag \texttt{analysis} with timestamp
+\texttt{05:00}.  These tags are really useful when it comes to
+tracking jobs, input data, and results, as we will see shortly.
+
+Now, let us assume that two hours have passed, and that two new log
+files have appeared.  We want to know what the analysis says based on
+these new files, so we import them and run analysis again, like in
+figure.
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/import_analysis_aga.pdftex_t}
+    \caption{caption here}
+    \label{figure:example}
+  \end{center}
+\end{figure}
+We now have in total seven jobs, where the new analysis job with jobid
+\texttt{job\_6} is the latest.
+
+Assume now that we keep the analysis results for the two different
+analysis-job runs, and then forget all about this.  Here are examples
+of a few questions that may rise some time later when looking back at
+the analysis results
+
+\begin{itemize}
+\item[]``This result, how old is it?'',
+\item[] ``whas it the 05:00-run or the 07:00-run?'', or
+\item[] ``which log files are actually used in the 03:00-run?''
+\end{itemize}
+
+You know the feeling.  Fortunately, the Urd and the Accelerator has
+kept book of everything related to these jobs, so a first thing to do
+is to lookup which analysis jobs that has been run in Urd.  A simple
+query will tell that two analysis-jobs are stored, one with timestamp
+\texttt{05:00}, and one with \texttt{07:00}.  But there is more to it.
+It will also tell you that for a specific job, say the latter, it
+depends on the import job that is timestamped \texttt{07:00}.  Then
+you can proceed and look at this import job, to find that it has file
+\texttt{log\_07:00.txt} as input.  Now we are 100\% certain what the
+analysis job at \texttt{07:00} was about.
+
+We can also do other things.  Say that we want to do a what-if test on
+the first analysis job.  We have changed the code a little bit, and we
+want to try out these changes in an \textsl{equivalent} environment.
+This is simple, just fetch the dependencies of \texttt{analysis@05:00}
+and feed to a new job running the analysis method.  After execution,
+it will look like in figure.
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/import_analysis_aga_rerun.pdftex_t}
+    \caption{caption here}
+    \label{figure:example}
+  \end{center}
+\end{figure}
+A new job \texttt{job\_7} has been created.  We have given it a new
+tag \texttt{analysis-test} so that it does not clash with the original
+analysis jobs.  A clash would not have caused any problems in the
+system, though.  Urd and Accelerator would be able to tell them apart.
+But for human readability and ease of understanding we change the
+name.  Now we can switch back and forth between the two jobs and see
+what implications a code change might have.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+In this case that makes sence, since there are several files and they
+are connected in time.
+
+Since there are several files, and they are
+connected in time, it makes sense to import them as a \textsl{chain},
+i.e.\ 
+
+
+The data files are log files in CSV-format, and there is a new log
+file written every hour.  The filename of each file reflects the date
+of the corresponding data.
+
+
+
+
+Assume that we have access to a number of data files,
+
+Let us start with a simple example, importing a text file.
+
+
+
+
+
+
+
+\subsection*{Function}
 
 
 \subsection*{Results}
