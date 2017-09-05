@@ -1,0 +1,9 @@
+*~
+.gitignore
+figures/*.pdf*
+doc.aux
+doc.log
+doc.pdf
+doc_flymake.aux
+doc_flymake.log
+
