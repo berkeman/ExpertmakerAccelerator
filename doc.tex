@@ -180,10 +180,13 @@ def synthesis():
     return x == "hello\_world"
 \end{python}
 This method expects a jobid associated with the key
-\texttt{hello\_world\_job} is input at execution time.  During
-execution, it will read the results from the jobid and assign it to
-the variable \texttt{x}.  It will then store a boolean in the job's
-result file.
+\texttt{hello\_world\_job} is input at execution time.  In this
+example we are using only one jobid, but there is no limit on how many
+jobs that can be linked in.  During execution, it will read the
+results from the jobid and assign it to the variable \texttt{x}.  It
+will then store a boolean in the job's result file.  One could argue
+that \texttt{job\_1} is aware of \texttt{job\_0}, and that is a
+motivation for the direction of the arrow.
 
 \begin{figure}[h!]
   \begin{center}
@@ -212,8 +215,96 @@ latter was input when executing \texttt{job\_1}.  The first job,
 \texttt{job\_0}, does not know of any jobs made in the future.
 
 
+\subsection{Advantages..}
+Job linking brings a number of advantages, of which two really stand out.
+\begin{itemize}
+\item[] We can rely on previous results to be available immediately
+  upon request.  This means that we can speed up development and
+  execution time, since we do not ever need to recompute any results.
+  This is particularly advantageous when designing incrementally, one
+  job at a time.
+\item[] All previous results are stored and bookkept, so there is a
+  full log of which job that was run when, which input data it used
+  and what the job options were.  No need for any detective work
+  again, never ask yourself the question ``what data is this plot
+  based on'' and so on.
+\end{itemize}
+
+\subsection{Working with data: Datasets}
+Now we will turn our focus to the \texttt{dataset}, which is a very
+efficient way to deal with small and large sets of data.  Datasets are
+stored in jobs.  A job could have any number of dataset, but we will
+start by looking at a simple example with one dataset, the import of a
+file.  See figure~\ref{fig:dataset_csvimport}
+
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/dataset_csvimport.pdftex_t}
+    \caption{caption here}
+    \label{fig:dataset_csvimport}
+  \end{center}
+\end{figure}
+
+\noindent In this example, the method to run is \texttt{csvimport},
+which is a standard method supplied with the Accelerator.  This method
+takes a mandatory option specifying the filename of the input data to
+import.  The data is imported into a dataset that is stored in the
+job, in this case \texttt{job\_0}.  If no name is specified, the
+dataset will be named \texttt{default}, and the full reference to the
+dataset is \texttt{job\_0/default}, or \texttt{job\_0} for short.
+
+A key feature is that the datasets can be linked to eachother, much
+like the way we have just seen jobs may link to one another.  We've
+just imported \texttt{file1.txt}.  Assume now that there is more data
+stored in \texttt{file2.txt}.  We import this data too, and add a
+\texttt{dataset} reference to the import of the previous file, like in
+
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/dataset_csvimport_chain.pdftex_t}
+    \caption{caption here}
+    \label{fig:dataset_csvimport_chain}
+  \end{center}
+\end{figure}
+
+\noindent If we look at the datasets only we have a situation like in
+figure~\ref{fig:dep_dataset_csvimport_chain}.  The second import was
+fed with the input dataset from \texttt{job\_0}, and this link is
+represented by the arrow in the image.
+
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/dep_dataset_csvimport_chain.pdftex_t}
+    \caption{caption here}
+    \label{fig:dep_dataset_csvimport_chain}
+  \end{center}
+\end{figure}
+
+\noindent The \texttt{job\_1} dataset reference can now be used to
+access all data imported from both files.
+
+Dataset chains are particularly convenient when dealing with data that
+grows over time.  Typically, this is log data, and it could be a log
+of transactions, user interactions, etc.
+
+\subsection{Multiple datasets in a job}
+Datasets live inside jobs, and it does not really matter if all
+datasets are in one job, or if there is one job for each dataset.
+Typically, data is imported one file at a time, and then there is one
+job per dataset, but sometimes this data is transformed into something
+else, and then it is practical to keep a large number of datasets, but
+storing them all in a single job.
+
+Let us look at a typical application for multiple datasets per job.
 
 
+
+
+
+
+
+
+\clearpage
 
 
 Let's start with a very simple example.  Assume that we are to analyse
