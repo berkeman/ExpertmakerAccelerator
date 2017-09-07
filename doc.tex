@@ -139,7 +139,7 @@ method is executed.
   \end{center}
 \end{figure}
 
-The Accelerator is told to run the method \texttt{hello\_world}.  It
+\noindent The Accelerator is told to run the method \texttt{hello\_world}.  It
 generates a unique identifier, called a jobid, and a directory in the
 target workspace with that name.  In this example, the name of the
 jobid is \texttt{job\_0}.  In the \texttt{job\_0}-directory, all
@@ -162,6 +162,54 @@ will be executed again, and a new jobid will be created and returned.
 The behaviour of storing previously run jobs and being able to
 retrieve them very quickly is very useful, as we will see later.
 
+
+\subsection{Linking Jobs}
+Now that we have run our first job, \texttt{hello\_world}, we want to
+continue working with the project and build upon the previous results.
+So, assume that we want to check that the \texttt{hello\_world}
+program indeed did what it should, that is, storing a certain string
+as the result.  We do this by creating another method,
+\texttt{validate\_hello}, that looks like this
+\begin{python}
+import blob
+  
+jobids = {hello_world_job,}
+
+def synthesis():
+    x = blob.load(jobid=jobids.hello_world_job)
+    return x == "hello\_world"
+\end{python}
+This method expects a jobid associated with the key
+\texttt{hello\_world\_job} is input at execution time.  During
+execution, it will read the results from the jobid and assign it to
+the variable \texttt{x}.  It will then store a boolean in the job's
+result file.
+
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/run_validate_hello.pdftex_t}
+    \caption{}
+    \label{fig:run-validate-hello}
+  \end{center}
+\end{figure}
+
+\noindent Figure~\ref{fig:run-validate-hello} depicts the situation.
+Now that we have seen how the jobid of a previous job is fed into the
+execution of a new job, we can omit some detail in the figures and
+redraw them like this
+
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/dep_validate_hello.pdftex_t}
+    \caption{}
+    \label{fig:run-validate-hello}
+  \end{center}
+\end{figure}
+
+\noindent Note the direction of the arrow.  The second job,
+\texttt{job\_1} is aware of \texttt{job\_0}, since the jobid of the
+latter was input when executing \texttt{job\_1}.  The first job,
+\texttt{job\_0}, does not know of any jobs made in the future.
 
 
 
