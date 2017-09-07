@@ -1,13 +1,30 @@
 \documentclass[a4paper]{article}
 
+\usepackage[pdftex]{graphicx,color}  % ab: for xfig pdf export
+
+% minted
+\usepackage{minted}
+\usemintedstyle{colorful}
+\definecolor{bg}{rgb}{0.95,0.95,0.95}
+\definecolor{bg_shell}{rgb}{0.95,0.95,1.00}
+%\newminted[python]{python}{bgcolor=bg, frame=lines}
+\newminted[python]{python}{}
+%\AfterEndEnvironment{minted}{\par\noindent}
+%\makeatletter
+%\patchcmd{\minted@colorbg}{\noindent}{\medskip\noindent}{}{}
+%\apptocmd{\endminted@colorbg}{\par\medskip}{}{}
+%\makeatother
+
+
+
+
 %\addtolength{\topmargin}{-2cm}
 %\addtolength{\textheight}{2cm}
 %\addtolength{\textwidth}{1cm}
 %\addtolength{\oddsidemargin}{-0.5cm}
 
 
-%\usepackage{epsfig,color}
-\usepackage[pdftex]{graphicx,color}
+
 \title{The Expertmaker Accelerator\\[1ex]\large{Processing one Billion Lines of Data per Second on a
   Single PC}\\\Large{--- Abstract ---}}
 
@@ -87,6 +104,70 @@ two principles:
 
 \clearpage
 \section{Functionality: Jobs}
+
+\emph{
+ teaser om hur coola grejer man kan göra innan vi börjar med triviala
+ exempel...  ``Så, för att förstå hur det är möjligt måste vi börja
+ med...'', typ
+}\\
+
+\emph{Maste namna workspace eller om det heter workdir}\\
+
+\emph{Maste namna python}\\
+
+
+
+
+\subsection{Basic Job Running}
+
+Let's begin with a simple ``hello world'' program.  We create a method
+with the following contents
+\begin{python}
+def synthesis():
+    return "hello world"
+\end{python}
+This program just returns a string and exits.  (It does not print
+anything to \texttt{stdout}, using \texttt{print()} and so on still
+works.)  Figure~\ref{fig:run-hello-world} shows what happens when the
+method is executed.
+
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/run_hello_world.pdftex_t}
+    \caption{}
+    \label{fig:run-hello-world}
+  \end{center}
+\end{figure}
+
+The Accelerator is told to run the method \texttt{hello\_world}.  It
+generates a unique identifier, called a jobid, and a directory in the
+target workspace with that name.  In this example, the name of the
+jobid is \texttt{job\_0}.  In the \texttt{job\_0}-directory, all
+information about the job being run is stored.  This includes the
+source code of the method and any options supplied at execution time.
+When the job is run, it stores the returned information in a file
+\texttt{result}\footnote{Actually, by default the returned data is
+  stored in Python's pickle format and the filename is
+  \texttt{result.pickle}}.  When the execution terminates,
+meta-information about the job, such as execution time, is also stored
+in separate files in the directory.  After successful execution the
+Accelerator returns the jobid to the finished job.
+
+
+If the Accelerator is asked to execute the \texttt{hello\_world}
+method again, it will immmediately return the previous jobid without
+executing the method.  This is true as long as the source code or any
+of the input options have changed.  If there are changes, the method
+will be executed again, and a new jobid will be created and returned.
+The behaviour of storing previously run jobs and being able to
+retrieve them very quickly is very useful, as we will see later.
+
+
+
+
+
+
+
 Let's start with a very simple example.  Assume that we are to analyse
 a system's log files.  The log files are in CSV-format, and there is a
 new log-file present every hour.  For the case of simplicity, assume
@@ -220,6 +301,30 @@ what implications a code change might have.
     \label{figure:example}
   \end{center}
 \end{figure}
+
+
+
+
+\subsection{gurk}
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/dataset_configurations.pdftex_t}
+    \caption{caption here}
+    \label{figure:example}
+  \end{center}
+\end{figure}
+
+\subsection{gurk}
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/dataset_configuration_chain.pdftex_t}
+    \caption{caption here}
+    \label{figure:example}
+  \end{center}
+\end{figure}
+
+
+
 
 
 
