@@ -311,7 +311,16 @@ two disjoint sets based on the value of the boolean.
 The figure shows a job that has taken a previous job's
 \texttt{default} \texttt{dataset} as an input, and based on that data
 created two new datasets, named \texttt{True} and \texttt{False}.  A
-third job is using the \texttt{True} part as input.
+third job is using the \texttt{True} part as input.  Short repetition
+on the direction of the arrow.  \texttt{job\_1} filtered the
+\texttt{dataset} from \texttt{job\_0}.  So if we take a look at
+\texttt{job\_1} and wonder where the input data is, we just follow the
+link back to \texttt{job\_0}.  If this job is an import, it will hold
+the name of the file that was imported.  If not, it will link back to
+another job, and so on, all the way down to the source of the dataset.
+So there is full tracking and easy observability of everything that
+relates to job execution in the Accelerator.
+
 
 This example actually touches again on something that is important.
 Assume that we have a large dataset and that we want to do complex
@@ -328,11 +337,81 @@ datasets.
 
 
 
+\subsection{Understanding Datasets}
+A \texttt{dataset} is a storage of a matrix of data.  It has a number
+of rows and a number of columns.  The columns have names and types.
+In order to have fast parallell execution, the columns are split into
+a fixed number of \textsl{slices}.
+
+
+
+\subsection{Adding New Columns to the Datasets}
+So far, we have seen how simple it is to add more lines of data to a
+\texttt{dataset} using chaining.  Now we will turn our attention to
+creating new columns in an existing dataset.  This is an important and
+common operation that the Accelerator handles very efficiently in
+linear time.\\
+\textsl{before we go on we need to understand a little bit of the dataset internals}\\
+
+The idea is very simple.  Assume that we have a \texttt{dataset} to
+which we want to add a new column.  What we do is that we create a new
+dataset with \textsl{only} the new column, and while creating that
+\texttt{dataset} we instruct the method to linke the job to the
+existin \texttt{dataset} with the original columns.  Accessing the new
+\texttt{dataset} will seamlessly read columns from the two involved
+datasets to make it indistinguishable from a single dataset.  See
+figure.
+
+
+
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/dataset_append_column.pdftex_t}
+    \caption{caption here}
+    \label{fig:dep_dataset_csvimport_chain}
+  \end{center}
+\end{figure}
 
 
 
 
 
+
+
+
+\section{Accessing Datasets}
+Accessing a \texttt{dataset} in a method is simple.  Assume that we
+have a \texttt{dataset} with a column named \texttt{title}, and we
+want to know the ten most common titles.  Consider the following
+complete code example
+\begin{python}
+from collections import Counter
+datasets = ('source',)
+
+def synthesis():
+    c = Counter(title for title in datasets.source.iterate(None, 'title'))
+    print(c.most_common(10))
+\end{python}
+
+\noindent This will print the ten most common titles and their
+frequencies in the \texttt{source} \texttt{dataset}.  The code in the
+example above runs serially on a single CPU.  We may parallellize it
+like this
+\begin{python}
+def analysis(sliceno):
+    return Counter(title for title in datasets.source.iterate(sliceno, 'title'))
+
+def synthesis(analysis_res)
+    c = analysis_res.merge_auto()
+    print(c.most_common(10))
+\end{python}
+
+\noindent In this example, we run the \texttt{dataset} iterator in the
+\texttt{analysis} function, which is forked into a pre-determined
+processes when invoked.  The parameter \texttt{sliceno} is an integer
+holding the unique number for each process.  Each process stores its
+result, and the single process in \texttt{synthesis} merges all
+results into one.  That's it.
 
 
 \clearpage
