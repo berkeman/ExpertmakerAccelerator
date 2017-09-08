@@ -295,7 +295,38 @@ job per dataset, but sometimes this data is transformed into something
 else, and then it is practical to keep a large number of datasets, but
 storing them all in a single job.
 
-Let us look at a typical application for multiple datasets per job.
+Let's look at a situation where it is convenient to create multiple
+datasets in a job.  Assume we have a \texttt{dataset} with a column
+that holds boolean values, and that we want to separate the set into
+two disjoint sets based on the value of the boolean.
+
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/filter_dataset.pdftex_t}
+    \caption{caption here}
+    \label{fig:dep_dataset_csvimport_chain}
+  \end{center}
+\end{figure}
+
+The figure shows a job that has taken a previous job's
+\texttt{default} \texttt{dataset} as an input, and based on that data
+created two new datasets, named \texttt{True} and \texttt{False}.  A
+third job is using the \texttt{True} part as input.
+
+This example actually touches again on something that is important.
+Assume that we have a large dataset and that we want to do complex
+operations on it.  Part of these operations uses only a minor part of
+the data.  If this set of data is separated into its own
+\texttt{dataset}, a lot of time might be saved when performing
+operations on it, due to its smaller size.  (As we will se further on,
+the Accelerator is really fast when it comes to reading datasets and
+conditionally skip lines.)  By storing the \textsl{other} data as
+well, we keep an copy of all the data, and we can chose to either
+process that chunk only, or run on all data, either from the original
+dataset or by iterating over both the \texttt{True} and \texttt{False}
+datasets.
+
+
 
 
 
