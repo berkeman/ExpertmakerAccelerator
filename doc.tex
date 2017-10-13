@@ -71,6 +71,17 @@
 %   case?
             
 
+\emph{
+ teaser om hur coola grejer man kan göra innan vi börjar med triviala
+ exempel...  ``Så, för att förstå hur det är möjligt måste vi börja
+ med...'', typ
+}\\
+
+\emph{Maste namna workspace eller om det heter workdir}\\
+
+\emph{Maste namna python}\\
+
+
 \subsection*{What It Is}
 The Expertmaker Accelerator is a tool for processing big data.  It has
 a small footprint and low overhead, and provides a number of
@@ -102,23 +113,38 @@ two principles:
   origins.
 \end{itemize}
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \clearpage
 \section{Functionality: Jobs}
-
-\emph{
- teaser om hur coola grejer man kan göra innan vi börjar med triviala
- exempel...  ``Så, för att förstå hur det är möjligt måste vi börja
- med...'', typ
-}\\
-
-\emph{Maste namna workspace eller om det heter workdir}\\
-
-\emph{Maste namna python}\\
+The basic operation of the Accelerator is to execute small programs
+called \textsl{methods}.  A method is, simply put, a python program
+that instantates one or more special functions.
 
 
 
 
-\subsection{Basic Job Running}
+
+\subsection{Basic Job Running:  ``Hello, World''}
+
+
 
 Let's begin with a simple ``hello world'' program.  We create a method
 with the following contents
@@ -126,50 +152,142 @@ with the following contents
 def synthesis():
     return "hello world"
 \end{python}
-This program just returns a string and exits.  (It does not print
-anything to \texttt{stdout}, using \texttt{print()} and so on still
-works.)  Figure~\ref{fig:run-hello-world} shows what happens when the
-method is executed.
+This method takes no inputs, it just returns a string and then
+exits.\footnote{This program does not print anything to
+  \texttt{stdout}.  Printing to \texttt{stdout} an so on is not
+  altered by the Accelerator, so for example \texttt{print()} will
+  work as expected.}  The Accelerator itself only returns a unique
+identifier, called a \textsl{jobid} back to the user.  This jobid can
+be mapped to a directory where the output from the run is stored
+together with all information that was needed to run the job and some
+profiling information.
 
+Among the information stored in the job direcory is a hash digest of
+the method's source code.  This is used to figure out if a result
+could be re-used instead of re-computed.  To get an idea of how this
+works we could try to run the \texttt{hello\_world} method again.
+Interestingly, it will not execute.  The Accelerator knows that the
+job has been run before, and therefore it immediately returns the
+jobid to that existing job.
+
+Figure~\ref{fig:execflow-hello-world} illustrates the dispatch of the
+\texttt{hello\_world} method.  The created jobid is called
+\texttt{job\_0}, and corresponding directory is shown in green.  The
+directory contains several files, the most important ones right now
+are \texttt{setup.json} which contains job information, and
+\texttt{result.pickle} containing the returned data.
+
+
+
+\vfill
 \begin{figure}[h!]
   \begin{center}
-    \input{figures/run_hello_world.pdftex_t}
-    \caption{}
-    \label{fig:run-hello-world}
+    \input{figures/execflow_hello_world.pdftex_t}
+    \caption{A simple hello world program.}
+    \label{fig:execflow-hello-world}
   \end{center}
 \end{figure}
 
-\noindent The Accelerator is told to run the method \texttt{hello\_world}.  It
-generates a unique identifier, called a jobid, and a directory in the
-target workspace with that name.  In this example, the name of the
-jobid is \texttt{job\_0}.  In the \texttt{job\_0}-directory, all
-information about the job being run is stored.  This includes the
-source code of the method and any options supplied at execution time.
-When the job is run, it stores the returned information in a file
-\texttt{result}\footnote{Actually, by default the returned data is
-  stored in Python's pickle format and the filename is
-  \texttt{result.pickle}}.  When the execution terminates,
-meta-information about the job, such as execution time, is also stored
-in separate files in the directory.  After successful execution the
-Accelerator returns the jobid to the finished job.
+\clearpage
 
 
-If the Accelerator is asked to execute the \texttt{hello\_world}
-method again, it will immmediately return the previous jobid without
-executing the method.  This is true as long as the source code or any
-of the input options have changed.  If there are changes, the method
-will be executed again, and a new jobid will be created and returned.
+
+
+
+
+\subsection{Jobs parameters}
+
+\begin{figure}[t!]
+  \begin{center}
+    \input{figures/execflow.pdftex_t}
+    \caption{Execution flow of a method.  The method takes optionally
+      three kinds of parameters: \texttt{options}, \texttt{jobids},
+      and \texttt{datasets}.}
+    \label{fig:execflow}
+  \end{center}
+\end{figure}
+
+There are three kinds of parameters that can be supplied when
+dispatching a method.  These are
+\begin{itemize}
+  \item[] \texttt{options}, a dictionary of options;
+  \item[] \texttt{datasets}, a set of input datasets, explained later; and
+  \item[] \texttt{jobids}, a set of identifiers to previously executed jobs.
+\end{itemize}
+And this is depicted in figure~\ref{fig:execflow}.  Input to a job
+dispatch are the parameters and which method to be executed.  Output
+is a completed \textsl{job} (a directory with files), or in case of
+subjobs, a set of \textsl{jobs}.
+
+
+\subsection{Jobs in more detail}
+
+Here is what happens when a job is dispatched.
+\begin{enumerate}
+\item It generates a unique identifier, called a \textsl{jobid}.
+\item A directory named after the jobid is created in the target workdir.
+\item Some files with job-information is stored in the directory.
+\item The method is executed.
+\item The running job may create files in the directory
+\item After successful completion, profiling information is written
+  to the directory.
+\end{enumerate}
+
+The uniqe identifier, the \textsl{jobid} is derived from the storage
+location, which is denoted a \textsl{workdir}, concatenated with an
+integer that increases by one for each new job.  It is possible to
+have any number of workdirs, and information in the can be shared
+between users, so different users to re-use eachothers successfully
+completed jobs.
+
+The files stored in the job directory at dispatch are complete in the
+sense that they contain all information required to run the job.  So
+the Accelerator job dispatcher actually just creates processes and
+points them to the job directory.  Then, the processes have to go
+figure out the rest by themselves.  When the job completes, the files
+are updated with profiling infomation, such as executin time spent in
+single process mode and execution time spent in every parallel
+process.  Along with the hash of the method's source, all code that is
+directly related to the job running is also stored in a compressed
+archive.  This code is typically limited to the method's source, but
+the code may have manually added dependencies to any other files, and
+in that case these are added too.  This way, source code and results
+are always connected and conveniently stored in the same directory for
+future reference.
+
+When a job completes, it stores the return value into a file named
+\texttt{result.pickle}.  (As a technical side note, the return value
+is serialised into Python's pickle format, but a user is not strictly
+required to know about the format.)  Any other files created by the
+method are also stored in the job directory, since it is the current
+working directory of the job's processes.
+
+Finally, after successful execution the Accelerator returns the jobid
+to the finished job.
+
+To repeat, if the Accelerator is asked to execute the same
+\texttt{hello\_world} method again, it will immmediately return the
+previous jobid \textsl{instead of executing the method again}.
+Internally, the Accelerator checks for previous jobs that run the
+\texttt{hello\_world} method, checks that they have the same parameter
+set, and checks that the hash digest of the method source is the same.
+If a match is found, it returns the corresponding jobid.  If not, the
+method will be executed because it is somehow differs from previous
+runs.
+
 The behaviour of storing previously run jobs and being able to
-retrieve them very quickly is very useful, as we will see later.
+retrieve them very quickly is indeed useful, as we will see next.
+
 
 
 \subsection{Linking Jobs}
-Now that we have run our first job, \texttt{hello\_world}, we want to
-continue working with the project and build upon the previous results.
-So, assume that we want to check that the \texttt{hello\_world}
-program indeed did what it should, that is, storing a certain string
-as the result.  We do this by creating another method,
-\texttt{validate\_hello}, that looks like this
+Assume that the job that we just run, \texttt{job\_0} based on the
+\texttt{hello\_world} method, actually did something computationally
+expensive, and we want to continue by generating some output based on
+this work.  To keep things simple, we print the result to
+\texttt{stdout}.  So, in order to do this, we create a new method that
+we call \texttt{print\_result}, and it goes like this
+
 \begin{python}
 import blob
   
@@ -177,35 +295,37 @@ jobids = {hello_world_job,}
 
 def synthesis():
     x = blob.load(jobid=jobids.hello_world_job)
-    return x == "hello\_world"
+    print(x)
 \end{python}
+
 This method expects a jobid associated with the key
-\texttt{hello\_world\_job} is input at execution time.  In this
-example we are using only one jobid, but there is no limit on how many
-jobs that can be linked in.  During execution, it will read the
-results from the jobid and assign it to the variable \texttt{x}.  It
-will then store a boolean in the job's result file.  One could argue
-that \texttt{job\_1} is aware of \texttt{job\_0}, and that is a
-motivation for the direction of the arrow.
+\texttt{hello\_world\_job} is input at execution time.  (The
+\texttt{jobids} parameter is actually a set, so any number of jobids
+could be included.)  During execution, it will read the results from
+the jobid and assign it to the variable \texttt{x}.  The variable
+\texttt{x} is then printed to \texttt{stdout}.  This method does not
+return anything at completion time.
+Figure~\ref{fig:execflow-print-result} illustrates the situation.
 
 \begin{figure}[h!]
   \begin{center}
-    \input{figures/run_validate_hello.pdftex_t}
-    \caption{}
-    \label{fig:run-validate-hello}
+    \input{figures/execflow_print_result.pdftex_t}
+    \caption{The jobid of the first job, \texttt{job\_0}, is used as
+      input to the \texttt{print\_result} job.}
+    \label{fig:execflow-print-result}
   \end{center}
 \end{figure}
 
-\noindent Figure~\ref{fig:run-validate-hello} depicts the situation.
-Now that we have seen how the jobid of a previous job is fed into the
-execution of a new job, we can omit some detail in the figures and
-redraw them like this
+Now that we have seen how the jobid of a previous job is
+fed into the execution of a new job, we can omit some detail in the
+figures and redraw them like in figure~\ref{fig:depflow-twojobs}.
 
 \begin{figure}[h!]
   \begin{center}
-    \input{figures/dep_validate_hello.pdftex_t}
-    \caption{}
-    \label{fig:run-validate-hello}
+    \input{figures/depflow_twojobs.pdftex_t}
+    \caption{Job dependencies.  \texttt{job\_1} points to
+      \texttt{job\_0}.}
+    \label{fig:depflow-twojobs}
   \end{center}
 \end{figure}
 
@@ -216,7 +336,9 @@ latter was input when executing \texttt{job\_1}.  The first job,
 
 
 \subsection{Advantages..}
-Job linking brings a number of advantages, of which two really stand out.
+Let's have a short summary of what we've seen so far and what it
+means.  Job linking brings a number of advantages, of which two really
+stand out.
 \begin{itemize}
 \item[] We can rely on previous results to be available immediately
   upon request.  This means that we can speed up development and
@@ -413,8 +535,40 @@ holding the unique number for each process.  Each process stores its
 result, and the single process in \texttt{synthesis} merges all
 results into one.  That's it.
 
+\subsection{More on the Iterator}
+The iterator can run on chained datasets and there are various stop
+conditions: stop after a certain number of datasets, stop at a certain
+dataset, stop at another jobs input parameters.
+
+It is possible to iterate over a range of lines in a dataset
+
+hashlabel
+translators/filters
+callback
+multi-user
+urd - how?
+
+rehasha dataset istället för enorm reduce!
+
+
+dataset\_separate\_by\_bool i agg-projektet.  Fundera på om den kan
+generera dataset-chains ut också.
+
+fundera på bilder med kataloger i text istället för ovaler etc.
 
 \clearpage
+
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/dirtest.pdftex_t}
+    \caption{caption here}
+    \label{fig:dep_dataset_csvimport_chain}
+  \end{center}
+\end{figure}
+
+
+
+
 
 
 Let's start with a very simple example.  Assume that we are to analyse
