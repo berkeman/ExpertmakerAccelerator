@@ -1,14 +1,13 @@
 \documentclass[a4paper]{article}
-
 \usepackage[pdftex]{graphicx,color}  % ab: for xfig pdf export
-
+%\usepackage{showframe}
 % minted
 \usepackage{minted}
-\usemintedstyle{colorful}
+\usemintedstyle{lovelace}
 \definecolor{bg}{rgb}{0.95,0.95,0.95}
 \definecolor{bg_shell}{rgb}{0.95,0.95,1.00}
 %\newminted[python]{python}{bgcolor=bg, frame=lines}
-\newminted[python]{python}{}
+\newminted[python]{python}{frame=lines}
 %\AfterEndEnvironment{minted}{\par\noindent}
 %\makeatletter
 %\patchcmd{\minted@colorbg}{\noindent}{\medskip\noindent}{}{}
@@ -19,7 +18,7 @@
 
 
 %\addtolength{\topmargin}{-2cm}
-%\addtolength{\textheight}{2cm}
+\addtolength{\textheight}{1cm}
 %\addtolength{\textwidth}{1cm}
 %\addtolength{\oddsidemargin}{-0.5cm}
 
@@ -133,18 +132,14 @@ two principles:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \clearpage
-\section{Functionality: Jobs}
+\section{Executing Code: Jobs}
 The basic operation of the Accelerator is to execute small programs
 called \textsl{methods}.  A method is, simply put, a python program
 that instantates one or more special functions.
 
 
 
-
-
 \subsection{Basic Job Running:  ``Hello, World''}
-
-
 
 Let's begin with a simple ``hello world'' program.  We create a method
 with the following contents
@@ -152,31 +147,32 @@ with the following contents
 def synthesis():
     return "hello world"
 \end{python}
-This method takes no inputs, it just returns a string and then
-exits.\footnote{This program does not print anything to
-  \texttt{stdout}.  Printing to \texttt{stdout} an so on is not
-  altered by the Accelerator, so for example \texttt{print()} will
-  work as expected.}  The Accelerator itself only returns a unique
-identifier, called a \textsl{jobid} back to the user.  This jobid can
-be mapped to a directory where the output from the run is stored
-together with all information that was needed to run the job and some
-profiling information.
+This program does not take any input parameters.  It just returns a
+string and exits.
 
-Among the information stored in the job direcory is a hash digest of
-the method's source code.  This is used to figure out if a result
-could be re-used instead of re-computed.  To get an idea of how this
-works we could try to run the \texttt{hello\_world} method again.
-Interestingly, it will not execute.  The Accelerator knows that the
-job has been run before, and therefore it immediately returns the
-jobid to that existing job.
+When execution of the method is completed, a single link, called a
+\texttt{jobid} is the only thing that is returned to the user.  The
+jobid points to a directory where the result from the execution is
+stored, together with all information that was needed to run the job
+plus some profiling information.
+
+If we try to run the job again it will not execute, simply because the
+Accelerator remembers the job has been run in the past.  Instead of
+running the job again, it immediately returns the jobid pointing to
+the previous run.  This means that from a user's perspective, there is
+no difference between job running and job result recalling!  In order
+to have the job executing again, we have to change either the source
+code or input parameters.
 
 Figure~\ref{fig:execflow-hello-world} illustrates the dispatch of the
 \texttt{hello\_world} method.  The created jobid is called
-\texttt{job\_0}, and corresponding directory is shown in green.  The
-directory contains several files, the most important ones right now
-are \texttt{setup.json} which contains job information, and
-\texttt{result.pickle} containing the returned data.
-
+\texttt{job\_0}, and corresponding directory information is shown in
+green.  The job directory contains several files, of which the most
+important ones right now are
+\begin{itemize}
+  \item[] \texttt{setup.json}, which contains job information; and
+  \item[] \texttt{result.pickle}, that contains the returned data.
+\end{itemize}
 
 
 \vfill
@@ -194,131 +190,47 @@ are \texttt{setup.json} which contains job information, and
 
 
 
-
-\subsection{Jobs parameters}
-
-\begin{figure}[t!]
-  \begin{center}
-    \input{figures/execflow.pdftex_t}
-    \caption{Execution flow of a method.  The method takes optionally
-      three kinds of parameters: \texttt{options}, \texttt{jobids},
-      and \texttt{datasets}.}
-    \label{fig:execflow}
-  \end{center}
-\end{figure}
-
-There are three kinds of parameters that can be supplied when
-dispatching a method.  These are
-\begin{itemize}
-  \item[] \texttt{options}, a dictionary of options;
-  \item[] \texttt{datasets}, a set of input datasets, explained later; and
-  \item[] \texttt{jobids}, a set of identifiers to previously executed jobs.
-\end{itemize}
-And this is depicted in figure~\ref{fig:execflow}.  Input to a job
-dispatch are the parameters and which method to be executed.  Output
-is a completed \textsl{job} (a directory with files), or in case of
-subjobs, a set of \textsl{jobs}.
-
-
-\subsection{Jobs in more detail}
-
-Here is what happens when a job is dispatched.
-\begin{enumerate}
-\item It generates a unique identifier, called a \textsl{jobid}.
-\item A directory named after the jobid is created in the target workdir.
-\item Some files with job-information is stored in the directory.
-\item The method is executed.
-\item The running job may create files in the directory
-\item After successful completion, profiling information is written
-  to the directory.
-\end{enumerate}
-
-The uniqe identifier, the \textsl{jobid} is derived from the storage
-location, which is denoted a \textsl{workdir}, concatenated with an
-integer that increases by one for each new job.  It is possible to
-have any number of workdirs, and information in the can be shared
-between users, so different users to re-use eachothers successfully
-completed jobs.
-
-The files stored in the job directory at dispatch are complete in the
-sense that they contain all information required to run the job.  So
-the Accelerator job dispatcher actually just creates processes and
-points them to the job directory.  Then, the processes have to go
-figure out the rest by themselves.  When the job completes, the files
-are updated with profiling infomation, such as executin time spent in
-single process mode and execution time spent in every parallel
-process.  Along with the hash of the method's source, all code that is
-directly related to the job running is also stored in a compressed
-archive.  This code is typically limited to the method's source, but
-the code may have manually added dependencies to any other files, and
-in that case these are added too.  This way, source code and results
-are always connected and conveniently stored in the same directory for
-future reference.
-
-When a job completes, it stores the return value into a file named
-\texttt{result.pickle}.  (As a technical side note, the return value
-is serialised into Python's pickle format, but a user is not strictly
-required to know about the format.)  Any other files created by the
-method are also stored in the job directory, since it is the current
-working directory of the job's processes.
-
-Finally, after successful execution the Accelerator returns the jobid
-to the finished job.
-
-To repeat, if the Accelerator is asked to execute the same
-\texttt{hello\_world} method again, it will immmediately return the
-previous jobid \textsl{instead of executing the method again}.
-Internally, the Accelerator checks for previous jobs that run the
-\texttt{hello\_world} method, checks that they have the same parameter
-set, and checks that the hash digest of the method source is the same.
-If a match is found, it returns the corresponding jobid.  If not, the
-method will be executed because it is somehow differs from previous
-runs.
-
-The behaviour of storing previously run jobs and being able to
-retrieve them very quickly is indeed useful, as we will see next.
-
-
-
 \subsection{Linking Jobs}
-Assume that the job that we just run, \texttt{job\_0} based on the
-\texttt{hello\_world} method, actually did something computationally
-expensive, and we want to continue by generating some output based on
-this work.  To keep things simple, we print the result to
-\texttt{stdout}.  So, in order to do this, we create a new method that
-we call \texttt{print\_result}, and it goes like this
+Assume that the job that we just run was computationally expensive,
+and that it returned a result that we'd like to use as input to further
+processing.
+
+To keep things simple, we create a method that just reads and prints
+the result from the previous job to \texttt{stdout}.  We create a new
+method \texttt{print\_result}, that goes like this
 
 \begin{python}
 import blob
   
-jobids = {hello_world_job,}
+jobids = {'hello_world_job',}
 
 def synthesis():
     x = blob.load(jobid=jobids.hello_world_job)
     print(x)
 \end{python}
 
-This method expects a jobid associated with the key
-\texttt{hello\_world\_job} is input at execution time.  (The
-\texttt{jobids} parameter is actually a set, so any number of jobids
-could be included.)  During execution, it will read the results from
-the jobid and assign it to the variable \texttt{x}.  The variable
-\texttt{x} is then printed to \texttt{stdout}.  This method does not
-return anything at completion time.
-Figure~\ref{fig:execflow-print-result} illustrates the situation.
+This method expects the \texttt{hello\_world\_job} input parameter to
+be provided at execution time.  The method then reads the result from
+the provided jobid and assigns it to the variable \texttt{x}, which is
+then printed to \texttt{stdout}.  Note that this method does not
+return anything.  Figure~\ref{fig:execflow-print-result} illustrates
+the situation.
 
 \begin{figure}[h!]
   \begin{center}
     \input{figures/execflow_print_result.pdftex_t}
-    \caption{The jobid of the first job, \texttt{job\_0}, is used as
-      input to the \texttt{print\_result} job.}
+    \caption{Jobid \texttt{job\_0}, is used as input to the
+      \texttt{print\_result} job.}
     \label{fig:execflow-print-result}
   \end{center}
 \end{figure}
 
-Now that we have seen how the jobid of a previous job is
-fed into the execution of a new job, we can omit some detail in the
-figures and redraw them like in figure~\ref{fig:depflow-twojobs}.
+A simplified version of Figure~\ref{fig:execflow-print-result}, only
+showing job dependencies, is shown in
+Figure~\ref{fig:depflow-twojobs}.  Note the direction of the arrow -
+The second job, \texttt{job\_1} had \texttt{job\_0} as input
+parameter, but \texttt{job\_0} does not know of any jobs run in the
+future.
 
 \begin{figure}[h!]
   \begin{center}
@@ -329,35 +241,152 @@ figures and redraw them like in figure~\ref{fig:depflow-twojobs}.
   \end{center}
 \end{figure}
 
-\noindent Note the direction of the arrow.  The second job,
-\texttt{job\_1} is aware of \texttt{job\_0}, since the jobid of the
-latter was input when executing \texttt{job\_1}.  The first job,
-\texttt{job\_0}, does not know of any jobs made in the future.
+
+\clearpage
 
 
-\subsection{Advantages..}
-Let's have a short summary of what we've seen so far and what it
-means.  Job linking brings a number of advantages, of which two really
-stand out.
+
+
+
+\subsection{Job Parameters}
+
+
+We've seen how jobids from completed jobs can be used as input to new
+ones.  This is one of three kinds of input parameters that a job can
+take.  Here the input parameters are summarised:
 \begin{itemize}
-\item[] We can rely on previous results to be available immediately
-  upon request.  This means that we can speed up development and
-  execution time, since we do not ever need to recompute any results.
-  This is particularly advantageous when designing incrementally, one
-  job at a time.
-\item[] All previous results are stored and bookkept, so there is a
-  full log of which job that was run when, which input data it used
-  and what the job options were.  No need for any detective work
-  again, never ask yourself the question ``what data is this plot
-  based on'' and so on.
+  \item[] \texttt{jobids}, a set of identifiers to previously executed jobs.
+  \item[] \texttt{options}, a dictionary of options;
+  \item[] \texttt{datasets}, a set of input \textsl{datasets}, explained later; and
+\end{itemize}
+See Figure~\ref{fig:execflow}.
+
+\subsubsection{jobids}
+Any number of jobids can be supplied as input to a job.  For example
+\begin{python}
+  jobid = {'sales_stats', 'overhead_stats',}
+\end{python}
+
+\subsubsection{options}
+Options are supplied as a dictionary and is very flexible in typing.  For example
+\begin{python}
+  options = dict(
+    name = 'alice',
+    defaultnames = set('alice', 'bob'),
+    param1 = 1,
+    param2 = float,
+  )
+\end{python}
+Here, values are defaults, so \texttt{param1} is default set to 1,
+while a floating point value must be supplied to \texttt{param2}.
+
+\subsubsection{datasets}
+Datasets will be described in more details later, but the
+\texttt{datasets} parameter is similar to the \texttt{jobids}
+parameter.
+
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/execflow.pdftex_t}
+    \caption{Execution flow of a method.  The method takes optionally
+      three kinds of parameters: \texttt{options}, \texttt{jobids},
+      and \texttt{datasets}.}
+    \label{fig:execflow}
+  \end{center}
+\end{figure}
+
+\clearpage
+
+
+
+\subsection{Jobs in more Detail}
+A recap and bit more flesh on the bones regarding jobs
+\begin{itemize}
+\item[1.]  Data and metadata relating to a job is stored in a job directory.
+\item[2.]  This job directory is pointed to by a jobid.
+\end{itemize}
+The files stored in the job directory at dispatch are complete in the
+sense that they contain all information required to run the job.  So
+the Accelerator job dispatcher actually just creates processes and
+points them to the job directory.  Then, the processes have to go
+figure out the rest by themselves.
+
+A running job has its \textsl{current working directory} pointing into
+the job directory, so any files created (plus return values) by a job
+will by default be stored in the job's directory.
+
+When the job completes, the files are updated with profiling
+infomation, such as execution time spent in single and parallel
+processing modes.
+
+All code that is directly related to the job is also stored in a
+compressed archive.  This arhive is typically limited to the method's
+source, but the code may have manually added dependencies to any other
+files, and in that case these are added too.  This way, source code
+and results are always connected and conveniently stored in the same
+directory for future reference.
+\begin{itemize}
+\item[3.]  Unique jobs are only executed once.
+\end{itemize}
+Among the meta information stored in the job directory is a hash
+digest of the method's source code (including manually added
+dependencies).  This hash together with the input parameters is used
+to figure out if a result could be re-used instead of re-computed.  In
+the next section we'll see how this feature brings a number of
+advantages.
+\begin{itemize}
+\item[4.]  Jobs may link to eachother using jobids.
+\end{itemize}
+Which means that jobs may share results and parameters with eachother.
+\begin{itemize}
+\item[5.]  Jobs are stored in workdirs.
+\item[6.]  There may be any number of workdirs.
+\end{itemize}
+This adds a layer of ``physical separation''.  All jobs relating to
+importing a set of data may be stored in one workdir, perhaps named
+\texttt{import}, and development work may be stored in a workdir
+\texttt{dev}, etc.  Jobids are created by appending a counter to the
+workdir name, so a job \texttt{dev\_42} may access data in
+\texttt{import\_3}, and so on, which helps manual inspection.
+
+\clearpage
+
+
+
+
+
+
+\subsection{Advantages}
+Let's have a short summary of what we've seen so far and what it
+means.  The fact that jobs may link to eachother combined with the
+fact that jobs may only be executed once brings a number of
+advantages, of which two really stand out.
+\begin{itemize}
+\item[1.] All previous results will be available immediately upon
+  request.  This means that we can speed up development and execution
+  time, since we do not ever need to recompute anythin.  This is
+  particularly advantageous when using an incremental design strategy,
+  designing one job at a time.
+\item[2.] All previous results are stored and bookkept, so there is a
+  full log of which job that was run and when, which input data the
+  job used and what the job parameters were.  This means that the way
+  from input data to output result is fully transparent and easy to
+  follow.  Much less risk of mixing up files and results.
 \end{itemize}
 
-\subsection{Working with data: Datasets}
+\clearpage
+
+
+
+
+
+\section{Working with data: Datasets}
 Now we will turn our focus to the \texttt{dataset}, which is a very
-efficient way to deal with small and large sets of data.  Datasets are
-stored in jobs.  A job could have any number of dataset, but we will
-start by looking at a simple example with one dataset, the import of a
-file.  See figure~\ref{fig:dataset_csvimport}
+efficient way to store and process small as well as large sets of
+data.  Datasets are stored in jobs.  A job could contain any number of
+dataset, but we will start by looking at a simple common example with
+using a single dataset: the \textsl{import} of a datafile.  See
+figure~\ref{fig:dataset_csvimport}.
 
 \begin{figure}[h!]
   \begin{center}
