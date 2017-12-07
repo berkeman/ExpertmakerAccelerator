@@ -24,7 +24,7 @@
 
 
 
-\title{The Expertmaker Accelerator\\[1ex]\large{Processing one Billion Lines of Data per Second on a
+\title{Techblog-to-be? --- The Expertmaker Accelerator\\[1ex]\large{Processing One Billion Lines of Data per Second on a
   Single PC}\\\Large{--- Abstract ---}}
 
 \author{A.\,Berkeman, C.\,Drougge, and S.\,H\"orberg}
@@ -35,12 +35,17 @@
 \thispagestyle{empty}
 
 \begin{figure}[h]
-  \begin{center}
-    \input{figures/test.pdftex_t} %the difference is just this part
-    \caption{caption here}
-    \label{figure:example}
-  \end{center}
+  \centering
+  \includegraphics[width=11cm]{odhner_square.jpg}
 \end{figure}
+
+%% \begin{figure}[h]
+%%   \begin{center}
+%%     \input{figures/test.pdftex_t} %the difference is just this part
+%%     \caption{caption here}
+%%     \label{figure:example}
+%%   \end{center}
+%% \end{figure}
 
 
 
@@ -70,47 +75,47 @@
 %   case?
             
 
-\emph{
- teaser om hur coola grejer man kan göra innan vi börjar med triviala
- exempel...  ``Så, för att förstå hur det är möjligt måste vi börja
- med...'', typ
-}\\
+%% \emph{
+%%  teaser om hur coola grejer man kan göra innan vi börjar med triviala
+%%  exempel...  ``Så, för att förstå hur det är möjligt måste vi börja
+%%  med...'', typ
+%% }\\
 
-\emph{Maste namna workspace eller om det heter workdir}\\
+%% \emph{Maste namna workspace eller om det heter workdir}\\
 
-\emph{Maste namna python}\\
+%% \emph{Maste namna python}\\
 
 
-\subsection*{What It Is}
-The Expertmaker Accelerator is a tool for processing big data.  It has
-a small footprint and low overhead, and provides a number of
-interesting features, most notably very fast data access and a novel
-scheme to store, retrieve, and reuse computations.  It has been used
-in commercial projects since 2012.
+%% \subsection*{What It Is}
+%% The Expertmaker Accelerator is a tool for processing big data.  It has
+%% a small footprint and low overhead, and provides a number of
+%% interesting features, most notably very fast data access and a novel
+%% scheme to store, retrieve, and reuse computations.  It has been used
+%% in commercial projects since 2012.
 
-\subsection*{Background}
-vad den anvants till, hur den utvecklats osv
+%% \subsection*{Background}
+%% vad den anvants till, hur den utvecklats osv
 
-\subsection*{Motivation and Approach}
-Processing big data is potentially both time consuming and resource
-hungry.  This is addressed in the Accelerator design by the following
-two principles:
-\begin{itemize}
-\item[1.] Modern computers are very powerful.\\ The Accelerator has
-  very vast data streaming from disk to CPU cores.  Critical parts are
-  written in the C programming language, and effort has been spent to
-  come close to the theoretical performance limits set by modern
-  hardware.
+%% \subsection*{Motivation and Approach}
+%% Processing big data is potentially both time consuming and resource
+%% hungry.  This is addressed in the Accelerator design by the following
+%% two principles:
+%% \begin{itemize}
+%% \item[1.] Modern computers are very powerful.\\ The Accelerator has
+%%   very vast data streaming from disk to CPU cores.  Critical parts are
+%%   written in the C programming language, and effort has been spent to
+%%   come close to the theoretical performance limits set by modern
+%%   hardware.
   
-\item[2.] Results are valuable, they should be easy to retrieve and
-  re-use.\\ The Accelerator connects each computed result to the
-  source code that was running, the input data used, and the set of
-  input parameters.  This connection makes it possible for the
-  Accelerator to automatically retrieve results instead of
-  re-computing them, which saves time.  It also brings full
-  transparency in that all work can be trivially traced back to its
-  origins.
-\end{itemize}
+%% \item[2.] Results are valuable, they should be easy to retrieve and
+%%   re-use.\\ The Accelerator connects each computed result to the
+%%   source code that was running, the input data used, and the set of
+%%   input parameters.  This connection makes it possible for the
+%%   Accelerator to automatically retrieve results instead of
+%%   re-computing them, which saves time.  It also brings full
+%%   transparency in that all work can be trivially traced back to its
+%%   origins.
+%% \end{itemize}
 
 
 
@@ -380,12 +385,25 @@ advantages, of which two really stand out.
 
 
 
-\section{Working with data: Datasets}
-Now we will turn our focus to the \texttt{dataset}, which is a very
-efficient way to store and process small as well as large sets of
-data.  Datasets are stored in jobs.  A job could contain any number of
-dataset, but we will start by looking at a simple common example with
-using a single dataset: the \textsl{import} of a datafile.  See
+\section{Datasets: Storing Data}
+
+The \texttt{dataset} is the Accelerator's default storage type for
+small or large quantities of data.  Datasets are created by methods
+and stored in job directories, just like any job result.
+
+Data is stored in a row-column format, and is typically sliced into a
+fixed number of slices to allow efficient parallell access.
+Furthermore, datasets may be \textsl{hashed}, so that slicing is based
+on the hash value of a given column.  In many practical applications,
+hashing makes parallel processes independent, minimising the need for
+complicated merging operations.
+
+
+
+\subsection{Importing Data}
+
+Let's have a look at the common operation of \textsl{importing},
+i.e.\ creating a dataset from a file.  See
 figure~\ref{fig:dataset_csvimport}.
 
 \begin{figure}[h!]
@@ -396,19 +414,28 @@ figure~\ref{fig:dataset_csvimport}.
   \end{center}
 \end{figure}
 
-\noindent In this example, the method to run is \texttt{csvimport},
-which is a standard method supplied with the Accelerator.  This method
-takes a mandatory option specifying the filename of the input data to
-import.  The data is imported into a dataset that is stored in the
-job, in this case \texttt{job\_0}.  If no name is specified, the
-dataset will be named \texttt{default}, and the full reference to the
-dataset is \texttt{job\_0/default}, or \texttt{job\_0} for short.
+\noindent The standard method, \texttt{csvimport}, is used to parse a
+pletoria of ``comma separated values''-file format and store as a
+dataset.  The method takes several input options, where the file name
+is mandatory.  The created dataset is stored in a job, and the name of
+the dataset will by default be the jobid plus the string
+\texttt{default}.  For example, if the \texttt{csvimport} jobid is
+\texttt{imp\_0}, the dataset will be referenced by
+\texttt{imp\_0/default}.  In this case, and always when there is no
+ambiguity, the jobid alone (\texttt{imp\_0}) could be used too.
 
-A key feature is that the datasets can be linked to eachother, much
-like the way we have just seen jobs may link to one another.  We've
-just imported \texttt{file1.txt}.  Assume now that there is more data
-stored in \texttt{file2.txt}.  We import this data too, and add a
-\texttt{dataset} reference to the import of the previous file, like in
+\clearpage
+
+
+
+
+\subsection{Linking Datasets, Chaining}
+
+Just like jobs, a key feature is that datasets can be linked to
+eachother.  Assume that we've just imported \texttt{file1.txt} into
+\texttt{imp\_0/default}.  Now, there is more data like it stored in
+\texttt{file2.txt}, we can import the latter file and supply a link to
+the previous dataset, see figure~\ref{fig:dataset_csvimport_chain}.
 
 \begin{figure}[h!]
   \begin{center}
@@ -434,22 +461,28 @@ represented by the arrow in the image.
 \noindent The \texttt{job\_1} dataset reference can now be used to
 access all data imported from both files.
 
-Dataset chains are particularly convenient when dealing with data that
-grows over time.  Typically, this is log data, and it could be a log
-of transactions, user interactions, etc.
+Linking datasets containing related content is called
+\texttt{chaining}, and this is particularly convenient when dealing
+with data that grows over time.  A typical kind is log data, and it
+could be a log of transactions, user interactions, etc.
 
-\subsection{Multiple datasets in a job}
-Datasets live inside jobs, and it does not really matter if all
-datasets are in one job, or if there is one job for each dataset.
-Typically, data is imported one file at a time, and then there is one
-job per dataset, but sometimes this data is transformed into something
-else, and then it is practical to keep a large number of datasets, but
-storing them all in a single job.
+\clearpage
 
-Let's look at a situation where it is convenient to create multiple
-datasets in a job.  Assume we have a \texttt{dataset} with a column
-that holds boolean values, and that we want to separate the set into
-two disjoint sets based on the value of the boolean.
+
+
+
+\subsection{Multiple Datasets in a Job}
+
+Datasets are created by methods and stored in job directories.
+Typically, a method creates a single dataset in the job directory, but
+there is no limit on how many datasets that could be stored in a
+single job directory.  This leads to some interesting applications.
+
+One situation where it is convenient to create multiple datasets in a
+job is when separating data into subsets based on some condition.  For
+example, assume that we want to separate a dataset into two disjoint
+datasets based on a column storing a boolean value.  See
+Figure~\ref{fig:dep_dataset_csvimport_chain}.
 
 \begin{figure}[h!]
   \begin{center}
@@ -459,110 +492,167 @@ two disjoint sets based on the value of the boolean.
   \end{center}
 \end{figure}
 
-The figure shows a job that has taken a previous job's
-\texttt{default} \texttt{dataset} as an input, and based on that data
-created two new datasets, named \texttt{True} and \texttt{False}.  A
-third job is using the \texttt{True} part as input.  Short repetition
-on the direction of the arrow.  \texttt{job\_1} filtered the
-\texttt{dataset} from \texttt{job\_0}.  So if we take a look at
-\texttt{job\_1} and wonder where the input data is, we just follow the
-link back to \texttt{job\_0}.  If this job is an import, it will hold
-the name of the file that was imported.  If not, it will link back to
-another job, and so on, all the way down to the source of the dataset.
-So there is full tracking and easy observability of everything that
-relates to job execution in the Accelerator.
+\noindent The figure show how \texttt{job\_1} has created two
+datasets, \texttt{job\_1/True} and \texttt{job\_1/False}, based on the
+input dataset \texttt{job\_0/default}.  A third job, \texttt{job\_2}
+is then accessing the \texttt{job\_1/True} dataset.
 
 
-This example actually touches again on something that is important.
-Assume that we have a large dataset and that we want to do complex
-operations on it.  Part of these operations uses only a minor part of
-the data.  If this set of data is separated into its own
-\texttt{dataset}, a lot of time might be saved when performing
-operations on it, due to its smaller size.  (As we will se further on,
-the Accelerator is really fast when it comes to reading datasets and
-conditionally skip lines.)  By storing the \textsl{other} data as
-well, we keep an copy of all the data, and we can chose to either
-process that chunk only, or run on all data, either from the original
-dataset or by iterating over both the \texttt{True} and \texttt{False}
-datasets.
+%% Short repetition on the direction of the arrow.  \texttt{job\_1}
+%% filtered the \texttt{dataset} from \texttt{job\_0}.  So if we take a
+%% look at \texttt{job\_1} and wonder where the input data is, we just
+%% follow the link back to \texttt{job\_0}.  If this job is an import, it
+%% will hold the name of the file that was imported.  If not, it will
+%% link back to another job, and so on, all the way down to the source of
+%% the dataset.  So there is full tracking and easy observability of
+%% everything that relates to job execution in the Accelerator.
 
+\noindent Let us look at an example of when such dataset splitting
+makes sense, and how it relates to the design methodology that the
+Accelerator is based upon.  Assume that we have a (perhaps large)
+dataset that we want to split into, say, a training set and a
+validation set.  Even if one set is small, it makes sense to split the
+dataset into two disjoint sets.  This way, we ``physically'' separate
+the data into two sets, while keeping all the data in the same place.
+This is good for transparency reasons, and any method following the
+split may iterate over both subsets to read the complete data.
 
-
-\subsection{Understanding Datasets}
-A \texttt{dataset} is a storage of a matrix of data.  It has a number
-of rows and a number of columns.  The columns have names and types.
-In order to have fast parallell execution, the columns are split into
-a fixed number of \textsl{slices}.
+\clearpage
 
 
 
-\subsection{Adding New Columns to the Datasets}
-So far, we have seen how simple it is to add more lines of data to a
-\texttt{dataset} using chaining.  Now we will turn our attention to
-creating new columns in an existing dataset.  This is an important and
-common operation that the Accelerator handles very efficiently in
-linear time.\\
-\textsl{before we go on we need to understand a little bit of the dataset internals}\\
 
-The idea is very simple.  Assume that we have a \texttt{dataset} to
-which we want to add a new column.  What we do is that we create a new
-dataset with \textsl{only} the new column, and while creating that
-\texttt{dataset} we instruct the method to linke the job to the
-existin \texttt{dataset} with the original columns.  Accessing the new
-\texttt{dataset} will seamlessly read columns from the two involved
-datasets to make it indistinguishable from a single dataset.  See
-figure.
+%% \subsection{Understanding Datasets}
+%% A \texttt{dataset} is a storage of a matrix of data.  It has a number
+%% of rows and a number of columns.  The columns have names and types.
+%% In order to have fast parallell execution, the columns are split into
+%% a fixed number of \textsl{slices}.
 
 
+
+\subsection{Adding New Columns to a Dataset}
+We have seen how easy it is to add more lines to data to a dataset
+using chaining - the only thing that needs to be done is to set a
+link, so the overhead is minimal.
+
+Now we'll see that is it equally simple to add new columns to an
+existing dataset.  Adding columns is also a common operation and the
+Accelerator handles it efficiently using links.
+
+The idea is very simple.  Assume that we have a ``source'' dataset to
+which we want to add a new column.  We create a new dataset containing
+\textsl{only} the new column, and while creating it we instruct the
+Accelerator to link to source dataset as its \textsl{parent}.  The
+naming might not be perfect, but there it is.
+
+Accessing the new one-column dataset will transparently access all the
+data in the source dataset too, making it indistinguishable from a
+single dataset.  See Figure~\ref{fig:dep_dataset_append_column}.
 
 \begin{figure}[h!]
   \begin{center}
     \input{figures/dataset_append_column.pdftex_t}
     \caption{caption here}
-    \label{fig:dep_dataset_csvimport_chain}
+    \label{fig:dep_dataset_append_column}
   \end{center}
 \end{figure}
 
+\clearpage
 
 
 
 
 
+\subsection{Dataset Internals}
+
+On a high level, the dataset stores a \textsl{matrix} of rows and
+columns.  Each column is represented by a column name, and all columns
+have the same number of rows.  Columns are typed, and there is a wide
+range of types available.
+
+The dataset is further split into disjoint slices, where each slice
+holds a unique subset of the dataset's rows.  Slicing makes simple but
+efficient parallel processing possible.  See Figure~\ref{fig:slices}.
+The number of slices is set initally by the user, and all workdirs
+that are used together in a project must use the same number of
+slices.
+
+On a low level, there is one file stored on disk for each slice and
+column.  A job that needs to read only a subset of the total number of
+columns may open and read from the relevant files only.
+
+A technical note: If the number slices is large and files are small,
+there will be a signinficant overhead from disk \texttt{seek()} if
+using rotating disks.  The Accelerator mitigates this by using single
+files with seek-indexing when appropriate.
 
 
-\section{Accessing Datasets}
-Accessing a \texttt{dataset} in a method is simple.  Assume that we
-have a \texttt{dataset} with a column named \texttt{title}, and we
-want to know the ten most common titles.  Consider the following
-complete code example
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/slices.pdftex_t}
+    \caption{Dataset internals}
+    \label{fig:slices}
+  \end{center}
+\end{figure}
+
+\clearpage
+
+
+
+\section{Datasets: Working with Data}
+
+In this section, we'll have a look at how to access the data stored in
+a dataset, and how to take advantage of slicing to have parallel
+processing.
+
+\subsection{Iterator Basics}
+
+Assume that we have a dataset with a column containing movie titles
+named \texttt{movie}, and we want to know the ten most common titles.
+Consider the following complete code example
 \begin{python}
 from collections import Counter
 datasets = ('source',)
 
 def synthesis():
-    c = Counter(title for title in datasets.source.iterate(None, 'title'))
+    c = Counter(title for title in datasets.source.iterate(None, 'movie'))
     print(c.most_common(10))
 \end{python}
+This will print the ten most common titles and their
+frequencies in the \texttt{source} dataset.  The code will run on a
+single CPU core, because of the \texttt{synthesis} function, which is
+called only once.  The \texttt{iterate} (class-)method therefore has
+to read through all slices in a serial fashion, and this is instructed
+by the first \texttt{None}-parameter.
 
-\noindent This will print the ten most common titles and their
-frequencies in the \texttt{source} \texttt{dataset}.  The code in the
-example above runs serially on a single CPU.  We may parallellize it
-like this
+
+
+\subsection{Parallel Execution}
+The Accelerator is much about parallel processing, and since datasets
+are slices, we can modify the above program to execute in parallel by
+doing the following modification
 \begin{python}
 def analysis(sliceno):
-    return Counter(title for title in datasets.source.iterate(sliceno, 'title'))
+    return Counter(title for title in datasets.source.iterate(sliceno, 'movie'))
 
 def synthesis(analysis_res)
     c = analysis_res.merge_auto()
     print(c.most_common(10))
 \end{python}
+Here, we run \texttt{iterate} inside the \texttt{analysis()} function.
+This function is forked once for each slice, and the argument
+\texttt{sliceno} will contain an integer between zero and the number
+of slices minus one.  The returned value from the analysis functions
+will be available as input to the synthesis function in the iterator
+variable \texttt{analysis\_res}.  It is possible to merge the results
+explicitly, but the iterator comes with a rather magic method
+\texttt{merge\_auto()} which merges the results from all slices into
+one based on the data type.  It is rather advanced, and can handle for
+example \texttt{Counter}s, \texttt{set}s, and composed types like
+\texttt{set}s of \texttt{Counter}s, and so on.
 
-\noindent In this example, we run the \texttt{dataset} iterator in the
-\texttt{analysis} function, which is forked into a pre-determined
-processes when invoked.  The parameter \texttt{sliceno} is an integer
-holding the unique number for each process.  Each process stores its
-result, and the single process in \texttt{synthesis} merges all
-results into one.  That's it.
+\clearpage
+
 
 \subsection{More on the Iterator}
 The iterator can run on chained datasets and there are various stop
@@ -586,6 +676,64 @@ generera dataset-chains ut också.
 fundera på bilder med kataloger i text istället för ovaler etc.
 
 \clearpage
+
+
+\section{Rehashing}
+
+In many common situations it is efficient to hash the dataset and
+operate on the slices independently.  For example, if we \textsl{hash}
+the \textsl{movie} dataset by \texttt{user}, any user may exist in
+only one slice, and we can collect sets of movies for each user
+independently.  Thus, merging, if even necessary, is trivial and low
+cost.
+
+But sometimes we want to perform several different computations on the
+same data, say that we for example would like to count how many unique
+users there are per movie.  Then, we'd prefer to have the dataset
+hashed on the \texttt{movie} column instead.
+
+A set of data can not be hashed on more than one column, but the
+Accelerator can, efficiently, \textsl{rehash} a dataset based on any
+column.  Rehashing is a parallel operation, and it might be
+interesting to see how it uses slices, datasets and chaining to
+achieve rehashing.
+
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/rehash.pdftex_t}
+    \caption{caption}
+    \label{fig:rehash}
+  \end{center}
+\end{figure}
+
+The \texttt{dataset\_rehash} method takes a \texttt{source} dataset as
+input, together with the name of the column to rehash by, See
+Figure~\ref{fig:rehash}.  Rehashing is carried out in parallel, where
+each \texttt{analysis} function reads and rehashes one slice of the
+input dataset.  Thus, each slice will write a complete dataset
+composing the data from one slice only.  In order to represent the
+full dataset, the datasets from all slices are chained.  Optionally,
+the method may, in the \texttt{synthesis} function, concatenate all
+datasets in the chain back into a single dataset again.
+
+
+
+
+
+
+\clearpage
+
+
+
+
+
+
+
+
+
+
+
+
 
 \begin{figure}[h!]
   \begin{center}
