@@ -179,11 +179,9 @@ important ones right now are
   \item[] \texttt{result.pickle}, that contains the returned data.
 \end{itemize}
 
-
-\vfill
 \begin{figure}[h!]
   \begin{center}
-    \input{figures/execflow_hello_world.pdftex_t}
+    \input{figures/job0.pdftex_t}
     \caption{A simple hello world program.}
     \label{fig:execflow-hello-world}
   \end{center}
@@ -219,32 +217,19 @@ be provided at execution time.  The method then reads the result from
 the provided jobid and assigns it to the variable \texttt{x}, which is
 then printed to \texttt{stdout}.  Note that this method does not
 return anything.  Figure~\ref{fig:execflow-print-result} illustrates
-the situation.
+the situation.  Note the direction of the arrow - The second job,
+\texttt{job\_1} had \texttt{job\_0} as input parameter, but
+\texttt{job\_0} does not know of any jobs run in the future.
 
 \begin{figure}[h!]
   \begin{center}
-    \input{figures/execflow_print_result.pdftex_t}
+    \input{figures/job0job1.pdftex_t}
     \caption{Jobid \texttt{job\_0}, is used as input to the
       \texttt{print\_result} job.}
     \label{fig:execflow-print-result}
   \end{center}
 \end{figure}
 
-A simplified version of Figure~\ref{fig:execflow-print-result}, only
-showing job dependencies, is shown in
-Figure~\ref{fig:depflow-twojobs}.  Note the direction of the arrow -
-The second job, \texttt{job\_1} had \texttt{job\_0} as input
-parameter, but \texttt{job\_0} does not know of any jobs run in the
-future.
-
-\begin{figure}[h!]
-  \begin{center}
-    \input{figures/depflow_twojobs.pdftex_t}
-    \caption{Job dependencies.  \texttt{job\_1} points to
-      \texttt{job\_0}.}
-    \label{fig:depflow-twojobs}
-  \end{center}
-\end{figure}
 
 
 \clearpage
@@ -353,8 +338,15 @@ importing a set of data may be stored in one workdir, perhaps named
 \texttt{dev}, etc.  Jobids are created by appending a counter to the
 workdir name, so a job \texttt{dev\_42} may access data in
 \texttt{import\_3}, and so on, which helps manual inspection.
+\begin{itemize}
+\item[] Jobs may dispatch other jobs.
+\end{itemize}
+It is perfectly fine for a job to dispatch any number of new jobs, and
+these jobs are called \textsl{subjobs}.
 
-\clearpage
+
+to a recurse limit.  The API for dispatching job
+xxxit\clearpage
 
 
 
