@@ -24,9 +24,8 @@
 
 
 
-\title{Techblog-to-be? --- The Accelerator\\[1ex]\large{Processing One
-    Billion Lines of Data per Second on a Single PC}\\\Large{---
-    DRAFT ---}}
+\title{The Accelerator\\[1ex]\large{Processing One Billion Lines of
+    Data per Second on a Single PC}\\\Large{--- DRAFT @7cb02a8---}}
 
 \author{A.\,Berkeman, C.\,Drougge, and S.\,H\"orberg}
 \date{}
@@ -465,7 +464,7 @@ the previous dataset, see figure~\ref{fig:dataset_csvimport_chain}.
   \end{center}
 \end{figure}
 
-\noindent The \texttt{job\_1} dataset reference can now be used to
+\noindent The \texttt{imp\_1} dataset reference can now be used to
 access all data imported from both files!
 
 Linking datasets containing related content is called
@@ -661,11 +660,10 @@ example \texttt{Counter}s, \texttt{set}s, and composed types like
 
 
 \subsection{More on the Iterator}
-The iterator can run on chained datasets and there are various stop
-conditions: st
-
-op after a certain number of datasets, stop at a certain
-dataset, stop at another jobs input parameters.
+{textsl
+The iterator conditionally runs on chained datasets and there are
+various stop conditions: stop after a certain number of datasets, stop
+at a certain dataset, stop at another jobs input parameters.
 
 It is possible to iterate over a range of lines in a dataset
 \begin{itemize}
@@ -676,8 +674,8 @@ It is possible to iterate over a range of lines in a dataset
 \item[] workdir sharing
 \item[] urd - how?
 \item[] dataset\_separate\_by\_bool\end{itemize}
-\end{document}
-\clearpage
+}
+  \clearpage
 
 
 \section{Rehashing}
@@ -721,7 +719,7 @@ datasets in the chain back into a single dataset again.
 
 
 
-
+\end{document}
 
 \clearpage
 
