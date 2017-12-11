@@ -24,8 +24,9 @@
 
 
 
-\title{Techblog-to-be? --- The Expertmaker Accelerator\\[1ex]\large{Processing One Billion Lines of Data per Second on a
-  Single PC}\\\Large{--- Abstract ---}}
+\title{Techblog-to-be? --- The Accelerator\\[1ex]\large{Processing One
+    Billion Lines of Data per Second on a Single PC}\\\Large{---
+    DRAFT ---}}
 
 \author{A.\,Berkeman, C.\,Drougge, and S.\,H\"orberg}
 \date{}
@@ -34,10 +35,10 @@
 \maketitle
 \thispagestyle{empty}
 
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=11cm]{odhner_square.jpg}
-\end{figure}
+%\begin{figure}[h]
+%  \centering
+%  \includegraphics[width=11cm]{odhner_square.jpg}
+%\end{figure}
 
 %% \begin{figure}[h]
 %%   \begin{center}
@@ -251,6 +252,43 @@ take.  Here the input parameters are summarised:
 \end{itemize}
 See Figure~\ref{fig:execflow}.
 
+
+
+\subsubsection{The Params Variable}
+A job's parameters are always available in the \texttt{params}
+variable.  For the current method, it is accessed by adding it as
+input to \texttt{prepare}, \texttt{analysis}, or \texttt{synthesis}, like this
+\begin{python}
+  def analysis(params):
+    print(params)
+\end{python}
+Apart from the input parameters, this variable also gives access to
+more information about the job and the current Accelerator setup, such
+as the total number of slices, the random seed, the hash of the source
+code, and method start time.
+
+
+Accessing the \texttt{params} variable for another job is done like this
+\begin{python}
+  jobids = {'thejob',}
+
+  def synthesis():
+    print(jobids.thejob.params)
+\end{python}
+it turns out it can be very useful to know for example which datasets
+another job has been processing, and so on.
+
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/execflow.pdftex_t}
+    \caption{Execution flow of a method.  The method takes optionally
+      three kinds of parameters: \texttt{options}, \texttt{jobids},
+      and \texttt{datasets}.}
+    \label{fig:execflow}
+  \end{center}
+\end{figure}
+
+
 \subsubsection{jobids}
 Any number of jobids can be supplied as input to a job.  For example
 \begin{python}
@@ -275,15 +313,6 @@ Datasets will be described in more details later, but the
 \texttt{datasets} parameter is similar to the \texttt{jobids}
 parameter.
 
-\begin{figure}[h!]
-  \begin{center}
-    \input{figures/execflow.pdftex_t}
-    \caption{Execution flow of a method.  The method takes optionally
-      three kinds of parameters: \texttt{options}, \texttt{jobids},
-      and \texttt{datasets}.}
-    \label{fig:execflow}
-  \end{center}
-\end{figure}
 
 \clearpage
 
@@ -339,14 +368,12 @@ importing a set of data may be stored in one workdir, perhaps named
 workdir name, so a job \texttt{dev\_42} may access data in
 \texttt{import\_3}, and so on, which helps manual inspection.
 \begin{itemize}
-\item[] Jobs may dispatch other jobs.
+\item[7.] Jobs may dispatch other jobs.
 \end{itemize}
 It is perfectly fine for a job to dispatch any number of new jobs, and
-these jobs are called \textsl{subjobs}.
-
-
-to a recurse limit.  The API for dispatching job
-xxxit\clearpage
+these jobs are called \textsl{subjobs}.  A maximum allowed recursion
+depth is defined to avoid infinite recursion.
+\clearpage
 
 
 
@@ -400,8 +427,8 @@ figure~\ref{fig:dataset_csvimport}.
 
 \begin{figure}[h!]
   \begin{center}
-    \input{figures/dataset_csvimport.pdftex_t}
-    \caption{caption here}
+    \input{figures/import_file1.pdftex_t}
+    \caption{Importing \texttt{file0.txt}.}
     \label{fig:dataset_csvimport}
   \end{center}
 \end{figure}
@@ -424,34 +451,22 @@ ambiguity, the jobid alone (\texttt{imp\_0}) could be used too.
 \subsection{Linking Datasets, Chaining}
 
 Just like jobs, a key feature is that datasets can be linked to
-eachother.  Assume that we've just imported \texttt{file1.txt} into
+eachother.  Assume that we've just imported \texttt{file0.txt} into
 \texttt{imp\_0/default}.  Now, there is more data like it stored in
-\texttt{file2.txt}, we can import the latter file and supply a link to
+\texttt{file1.txt}, we can import the latter file and supply a link to
 the previous dataset, see figure~\ref{fig:dataset_csvimport_chain}.
 
 \begin{figure}[h!]
   \begin{center}
-    \input{figures/dataset_csvimport_chain.pdftex_t}
-    \caption{caption here}
+    \input{figures/import_file0file1.pdftex_t}
+    \caption{Chaining the import of \texttt{file1.txt} to the previous
+      import of \texttt{file0.txt}.}
     \label{fig:dataset_csvimport_chain}
   \end{center}
 \end{figure}
 
-\noindent If we look at the datasets only we have a situation like in
-figure~\ref{fig:dep_dataset_csvimport_chain}.  The second import was
-fed with the input dataset from \texttt{job\_0}, and this link is
-represented by the arrow in the image.
-
-\begin{figure}[h!]
-  \begin{center}
-    \input{figures/dep_dataset_csvimport_chain.pdftex_t}
-    \caption{caption here}
-    \label{fig:dep_dataset_csvimport_chain}
-  \end{center}
-\end{figure}
-
 \noindent The \texttt{job\_1} dataset reference can now be used to
-access all data imported from both files.
+access all data imported from both files!
 
 Linking datasets containing related content is called
 \texttt{chaining}, and this is particularly convenient when dealing
@@ -477,11 +492,10 @@ datasets based on a column storing a boolean value.  See
 Figure~\ref{fig:dep_dataset_csvimport_chain}.
 
 \begin{figure}[h!]
-  \begin{center}
-    \input{figures/filter_dataset.pdftex_t}
+  \hspace{1cm}
+  \input{figures/filter_dataset.pdftex_t}
     \caption{caption here}
     \label{fig:dep_dataset_csvimport_chain}
-  \end{center}
 \end{figure}
 
 \noindent The figure show how \texttt{job\_1} has created two
@@ -648,25 +662,21 @@ example \texttt{Counter}s, \texttt{set}s, and composed types like
 
 \subsection{More on the Iterator}
 The iterator can run on chained datasets and there are various stop
-conditions: stop after a certain number of datasets, stop at a certain
+conditions: st
+
+op after a certain number of datasets, stop at a certain
 dataset, stop at another jobs input parameters.
 
 It is possible to iterate over a range of lines in a dataset
-
-hashlabel
-translators/filters
-callback
-multi-user
-urd - how?
-
-rehasha dataset istället för enorm reduce!
-
-
-dataset\_separate\_by\_bool i agg-projektet.  Fundera på om den kan
-generera dataset-chains ut också.
-
-fundera på bilder med kataloger i text istället för ovaler etc.
-
+\begin{itemize}
+\item[] hashlabel
+\item[] translators/filters
+\item[] callback
+\item[] multi-user
+\item[] workdir sharing
+\item[] urd - how?
+\item[] dataset\_separate\_by\_bool\end{itemize}
+\end{document}
 \clearpage
 
 
