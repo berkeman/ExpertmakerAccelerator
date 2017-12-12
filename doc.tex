@@ -230,7 +230,42 @@ the situation.  Note the direction of the arrow - The second job,
   \end{center}
 \end{figure}
 
+\clearpage
 
+
+
+
+\subsection{Job Execution Flow}
+
+There are three functions in a method that are called from the
+Accelerator when a method is running, and they are \texttt{prepare()},
+\texttt{analysis()}, and \texttt{synthesis()}.  All three may exist in
+the same method, and then they are called in turn, but only one is
+required.
+\begin{itemize}
+\item[] \texttt{prepare()} is executed first.  The returned value is
+  available in the \texttt{prepare\_res} variable.
+\item[] \texttt{analysis()} is run in parallel processes, one for each
+  slice.  It is called after completion of \texttt{prepare()}.  Common
+  input paramerers are \texttt{sliceno}, holding the number of the
+  process, and \texttt{prepare\_res}.  The return value for each
+  process is available in the \texttt{analysis\_res} variable.
+\item[] \texttt{synthesis()} is called after all
+  \texttt{analysis()}-processes are completed.  It is typically used
+  to aggregate parallel results created by \texttt{analysis()} and
+  takes both \texttt{prepare\_res} and \texttt{analysis\_res} as
+  optional parameters.  The latter is an iterator of the results
+  from the parallel processes.
+\end{itemize}
+See Figure~\ref{fig:prepanasyn}.
+
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/prepanasyn.pdftex_t}
+    \caption{Result propagation in a method.}
+    \label{fig:prepanasyn}
+  \end{center}
+\end{figure}
 
 \clearpage
 
@@ -249,7 +284,8 @@ take.  Here the input parameters are summarised:
   \item[] \texttt{options}, a dictionary of options;
   \item[] \texttt{datasets}, a set of input \textsl{datasets}, explained later; and
 \end{itemize}
-See Figure~\ref{fig:execflow}.
+See Figure~\ref{fig:execflow}.  Parameters are entered as global
+variables early in the method's source.
 
 
 
