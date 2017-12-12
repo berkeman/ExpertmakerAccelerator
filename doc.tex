@@ -640,6 +640,65 @@ files with seek-indexing when appropriate.
 
 
 
+
+\subsection{Dataset Column Types}
+There are a number of useful types available for dataset columns.  They include
+\begin{itemize}
+  \item[] \texttt{number}, which is float or int, up to $2^{1007}-1$.
+  \item[] \texttt{float64}, \texttt{int32}, etc.
+  \item[] \texttt{bool}
+  \item[] \texttt{date}, \texttt{time}, \texttt{datetime}
+  \item[] \texttt{bytes}, \texttt{ascii}, \texttt{unicode}
+  \item[] \texttt{json}
+\end{itemize}
+and more.  Several of these types are designed to make importing data
+from text files straightforward, without parse errors, overflows etc.
+Note that columns may containing \texttt{json} data that is
+interpreted as dictionaries when operated upon.
+
+\clearpage
+
+
+\subsection{Dataset Attributes}
+The dataset has a number of attributes associated with it.  The shape
+and number of rows are accessed like this
+\begin{python}
+  print(datasets.source.shape)
+  print(datasets.source.lines)
+\end{python}
+where \texttt{lines} returns a list with number of rows per slice.
+The total number of rows is the sum of this list.
+
+Each dataset may have a filename and a caption associated
+\begin{python}
+  print(datasets.source.filename)
+  print(datasets.source.caption)
+\end{python}
+which makes it easier to follow the data flow.  A common situation is
+to extract the column names or the type of a specific column.
+\begin{python}
+  print(datasets.source.columns.keys())
+  print(datasets.source.columns['movie'].type)
+\end{python}
+
+Interestingly, the Accelerator computes the maximum and minimum value
+of each column when the dataset is created.  This is a simple
+operation that is done in linear time.  These values could be accessed
+like this
+\begin{python}
+  print(datasets.source.columns['rating'].min)
+  print(datasets.source.columns['rating'].max)
+\end{python}
+
+Other important attributes are the \texttt{hashlabel}, i.e.\ which
+column the dataset is hashed by, and the name of the \texttt{previous}
+datasets, should it exist.
+
+\clearpage
+
+
+
+
 \section{Datasets: Working with Data}
 
 In this section, we'll have a look at how to access the data stored in
@@ -695,23 +754,96 @@ example \texttt{Counter}s, \texttt{set}s, and composed types like
 \clearpage
 
 
-\subsection{More on the Iterator}
-{textsl
-The iterator conditionally runs on chained datasets and there are
-various stop conditions: stop after a certain number of datasets, stop
-at a certain dataset, stop at another jobs input parameters.
 
-It is possible to iterate over a range of lines in a dataset
+
+\subsection{Iterating over Several Columns}
+Since data is stored independently for each column there is no
+overhead from reading a subset of the dataset's columns.  In the
+previous sections we've seen how to iterate over a single column using
+iterate.  Iterating over more columns is straightforward by feeding a
+list of column names to \texttt{iterate}, like shown in this example
+\begin{python}
+from collections import defaultdict
+datasets = {'source',}
+
+def analysis(sliceno):
+  user2titleset = defaultdict(set)
+  for user, title in datasets.source.iterate(sliceno, ('user', 'movie')):
+    user2titleset[user].add(title)
+  return user2titleset
+\end{python}
+It is also possible to iterate over all columns by leaving the name
+list empty or specifying the column list to be \texttt{None}
+\begin{python}
+  ...
+  for columns in datasets.source.iterate(sliceno, ()):
+    print(columns)
+    break
+\end{python}
+This example will print the first row of a dataset and then exit.
+
+\clearpage
+
+
+
+
+\subsection{Iterating over Dataset Chains}
+
+Previously, we've seen how to iterate over a single dataset using
+\texttt{iterate}.  There is a corresponding function,
+\texttt{iterate\_chain}, that is used for iterating over chains of
+datasets.  This function takes a number of arguments, such as
 \begin{itemize}
-\item[] hashlabel
-\item[] translators/filters
-\item[] callback
-\item[] multi-user
-\item[] workdir sharing
-\item[] urd - how?
-\item[] dataset\_separate\_by\_bool\end{itemize}
-}
-  \clearpage
+\item[] \texttt{length}, i.e.\ the number of datasets to iterate over.
+  By default, it will iterate over all datasets in the chain.
+\item[] \texttt{callbacks}, functions that can be called before and/or
+  after each dataset in a chain.  Very useful for aggregating data
+  between datasets.
+\item[] \texttt{stop\_jobid} which stops iterating at a certain jobid.
+  This jobid could be from \textsl{another} job's parameters.
+\item[] \texttt{range}, which allows for iterating over a range of
+  data.
+\end{itemize}
+The \texttt{range} options is based on the max/min values stored for
+each column in the dataset.  Assuming that the chain is sorted, one
+can for example set 
+\mintinline{python}{range={timestamp, ('2016-01-01', '2016-01-31')}}
+in order to get rows within the specified range only.  The %
+\texttt{range} is quite costly, since it requires each row in the
+dataset chain with dates in the range to be checked against the range
+criterion.  Therefore, there is a \texttt{sloppy} version that
+iterates over complete datasets in the chain that contains dates
+within the range.  This is useful, for example, to very quickly
+produce histograms or plots of subsets of the data.
+
+
+
+
+\subsection{Asserting the Hashlabel}
+Some methods will only work if the input datasets are hashed on a
+certain column.  To make sure this is the case, there is an optional
+\texttt{hashlabel} parameter to the iterators that will cause a
+failure if the supplied column name does not correspond to the
+dataset's hashlabel.
+
+
+
+
+\subsection{Dataset Translators and Filters}
+
+The iterator may perform data translation and filtering on-the-fly
+using the \texttt{translators} and \texttt{filters} options.  Here is
+an example of how a dictionary can be fed into the iterator to map a
+column
+\begin{python}
+  mapper = {2: ’HUMANLIKE’, 4: ’QUADRUPED’, 5: ’STARFISH’,}
+  for animal in datasets.source.iterate_chain(sliceno, \
+     ’NUM_LEGS’, translator={’NUM_LEGS’: mapper,}):
+  ...
+\end{python}
+Filters work similarly.
+
+\clearpage
 
 
 \section{Rehashing}
