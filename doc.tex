@@ -294,16 +294,17 @@ A job's parameters are always available in the \texttt{params}
 variable.  For the current method, it is accessed by adding it as
 input to \texttt{prepare}, \texttt{analysis}, or \texttt{synthesis}, like this
 \begin{python}
-  def analysis(params):
+  def synthesis(params):
     print(params)
 \end{python}
 Apart from the input parameters, this variable also gives access to
 more information about the job and the current Accelerator setup, such
 as the total number of slices, the random seed, the hash of the source
-code, and method start time.
+code, and method execution start time.
 
 
-Accessing the \texttt{params} variable for another job is done like this
+Accessing the \texttt{params} variable for \textsl{another} job is
+done like this
 \begin{python}
   jobids = {'thejob',}
 
@@ -622,16 +623,16 @@ On a low level, there is one file stored on disk for each slice and
 column.  A job that needs to read only a subset of the total number of
 columns may open and read from the relevant files only.
 
-A technical note: If the number slices is large and files are small,
-there will be a signinficant overhead from disk \texttt{seek()} if
-using rotating disks.  The Accelerator mitigates this by using single
-files with seek-indexing when appropriate.
+A technical note: If the number of slices is large and files are
+small, there will be a signinficant overhead from disk \texttt{seek()}
+if using rotating disks.  The Accelerator mitigates this by using
+single files with offset-indexing when appropriate.
 
 
 \begin{figure}[h!]
   \begin{center}
-    \input{figures/slices.pdftex_t}
-    \caption{Dataset internals}
+    \input{figures/dataset_concept.pdftex_t}
+    \caption{A dataset composed four columns that is sliced into three slices.}
     \label{fig:slices}
   \end{center}
 \end{figure}
@@ -644,7 +645,7 @@ files with seek-indexing when appropriate.
 \subsection{Dataset Column Types}
 There are a number of useful types available for dataset columns.  They include
 \begin{itemize}
-  \item[] \texttt{number}, which is float or int, up to $2^{1007}-1$.
+  \item[] \texttt{number}, which is float or int, up to $\pm(2^{1007}-1)$.
   \item[] \texttt{float64}, \texttt{int32}, etc.
   \item[] \texttt{bool}
   \item[] \texttt{date}, \texttt{time}, \texttt{datetime}
@@ -689,6 +690,9 @@ like this
   print(datasets.source.columns['rating'].min)
   print(datasets.source.columns['rating'].max)
 \end{python}
+Max and min values are used when iterating over chains of sorted
+datasets, to quickly decide if a dataset is outside range and can be
+skipped in its entirety.
 
 Other important attributes are the \texttt{hashlabel}, i.e.\ which
 column the dataset is hashed by, and the name of the \texttt{previous}
@@ -708,8 +712,8 @@ processing.
 \subsection{Iterator Basics}
 
 Assume that we have a dataset with a column containing movie titles
-named \texttt{movie}, and we want to know the ten most common titles.
-Consider the following complete code example
+named \texttt{movie}, and we want to know the ten most frequent
+titles.  Consider the following example of a complete method
 \begin{python}
 from collections import Counter
 datasets = ('source',)
@@ -718,18 +722,18 @@ def synthesis():
     c = Counter(title for title in datasets.source.iterate(None, 'movie'))
     print(c.most_common(10))
 \end{python}
-This will print the ten most common titles and their
-frequencies in the \texttt{source} dataset.  The code will run on a
-single CPU core, because of the \texttt{synthesis} function, which is
-called only once.  The \texttt{iterate} (class-)method therefore has
-to read through all slices in a serial fashion, and this is instructed
-by the first \texttt{None}-parameter.
+This will print the ten most common titles and their counts in the
+\texttt{source} dataset.  The code will run on a single CPU core,
+because of the \texttt{synthesis} function, which is called only once.
+The \texttt{iterate} (class-)method therefore has to read through all
+slices in a serial fashion, and this is reflected by the first
+argument being \texttt{None}.
 
 
 
 \subsection{Parallel Execution}
 The Accelerator is much about parallel processing, and since datasets
-are slices, we can modify the above program to execute in parallel by
+are sliced, we can modify the above program to execute in parallel by
 doing the following modification
 \begin{python}
 def analysis(sliceno):
@@ -746,9 +750,9 @@ of slices minus one.  The returned value from the analysis functions
 will be available as input to the synthesis function in the iterator
 variable \texttt{analysis\_res}.  It is possible to merge the results
 explicitly, but the iterator comes with a rather magic method
-\texttt{merge\_auto()} which merges the results from all slices into
-one based on the data type.  It is rather advanced, and can handle for
-example \texttt{Counter}s, \texttt{set}s, and composed types like
+\texttt{merge\_auto()}, which merges the results from all slices into
+one based on the data type.  It can for example merge
+\texttt{Counter}s, \texttt{set}s, and composed types like
 \texttt{set}s of \texttt{Counter}s, and so on.
 
 \clearpage
@@ -758,10 +762,11 @@ example \texttt{Counter}s, \texttt{set}s, and composed types like
 
 \subsection{Iterating over Several Columns}
 Since data is stored independently for each column there is no
-overhead from reading a subset of the dataset's columns.  In the
+overhead from reading a subset of a dataset's columns.  In the
 previous sections we've seen how to iterate over a single column using
-iterate.  Iterating over more columns is straightforward by feeding a
-list of column names to \texttt{iterate}, like shown in this example
+\texttt{iterate}.  Iterating over more columns is straightforward by
+feeding a list of column names to \texttt{iterate}, like shown in this
+example
 \begin{python}
 from collections import defaultdict
 datasets = {'source',}
@@ -772,11 +777,12 @@ def analysis(sliceno):
     user2titleset[user].add(title)
   return user2titleset
 \end{python}
+This example creates a lookup dictionary from users to sets of movies.
 It is also possible to iterate over all columns by leaving the name
 list empty or specifying the column list to be \texttt{None}
 \begin{python}
   ...
-  for columns in datasets.source.iterate(sliceno, ()):
+  for columns in datasets.source.iterate(sliceno, None):
     print(columns)
     break
 \end{python}
@@ -800,7 +806,10 @@ datasets.  This function takes a number of arguments, such as
   after each dataset in a chain.  Very useful for aggregating data
   between datasets.
 \item[] \texttt{stop\_jobid} which stops iterating at a certain jobid.
-  This jobid could be from \textsl{another} job's parameters.
+  This jobid could be from \textsl{another} job's parameters, so we
+  can for example iterate exactly over new datasets not covered by a
+  previous job.
+
 \item[] \texttt{range}, which allows for iterating over a range of
   data.
 \end{itemize}
@@ -810,7 +819,7 @@ can for example set
 \mintinline{python}{range={timestamp, ('2016-01-01', '2016-01-31')}}
 in order to get rows within the specified range only.  The %
 \texttt{range} is quite costly, since it requires each row in the
-dataset chain with dates in the range to be checked against the range
+dataset chain with dates within the range to be checked against the range
 criterion.  Therefore, there is a \texttt{sloppy} version that
 iterates over complete datasets in the chain that contains dates
 within the range.  This is useful, for example, to very quickly
@@ -820,7 +829,8 @@ produce histograms or plots of subsets of the data.
 
 
 \subsection{Asserting the Hashlabel}
-Some methods will only work if the input datasets are hashed on a
+Depending on how the parallel processing is implemented in a method,
+some methods will only work if the input datasets are hashed on a
 certain column.  To make sure this is the case, there is an optional
 \texttt{hashlabel} parameter to the iterators that will cause a
 failure if the supplied column name does not correspond to the
@@ -836,7 +846,7 @@ using the \texttt{translators} and \texttt{filters} options.  Here is
 an example of how a dictionary can be fed into the iterator to map a
 column
 \begin{python}
-  mapper = {2: ’HUMANLIKE’, 4: ’QUADRUPED’, 5: ’STARFISH’,}
+  mapper = {2: ’HUMANLIKE’, 4: ’LABRADOR’, 5: ’STARFISH’,}
   for animal in datasets.source.iterate_chain(sliceno, \
      ’NUM_LEGS’, translator={’NUM_LEGS’: mapper,}):
   ...
@@ -884,8 +894,37 @@ full dataset, the datasets from all slices are chained.  Optionally,
 the method may, in the \texttt{synthesis} function, concatenate all
 datasets in the chain back into a single dataset again.
 
+\clearpage
 
 
+
+
+
+\section{Automatas:  Using Urd}
+Let's turn our focus to how to call and run methods.  Methods are
+called from a script which is called an \textsl{automata}.
+
+The \texttt{automatarunner} command is used to execute automatas, and
+it calls the \texttt{main()} function, to which it provides an input
+parameter that is an object created from the \texttt{Urd} class.  This
+object bookkeeps all operations that are performed in the automata.
+The \texttt{urd} object also communicates with the \texttt{urd}
+server, to which it may read and write results from automata operations.
+
+\subsection{A Simple Example}
+A very basic one is shown below
+\begin{python}
+def main(urd):
+  jid = urd.build('hello_world')
+\end{python}
+
+
+\subsection{Example of Dependencies}
+\begin{python}
+def main(urd):
+  jid = urd.build('hello_world')
+  jid2 = urd.build('print_result', jobids=dict(hello_world_job=jid))
+\end{python}
 
 \end{document}
 

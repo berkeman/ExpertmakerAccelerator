@@ -1,8 +1,8 @@
-#FIG 3.2  Produced by xfig version 3.2.5c
+#FIG 3.2  Produced by xfig version 3.2.6a
 Landscape
 Center
 Metric
-A4      
+A4
 100.00
 Single
 -2
@@ -26,6 +26,8 @@ Single
 	1 1 1.00 45.00 90.00
 	 7920 14220 7155 14220 7160 13500 6665 13500
 	 0.000 1.000 1.000 0.000
-4 0 8 50 -1 0 10 0.0000 2 150 1005 7155 13725 \\textsl{link to}\001
-4 0 8 50 -1 0 10 0.0000 2 135 1410 7200 13860 \\textsl{old columns}\001
-4 0 12 50 -1 0 10 0.0000 2 135 1710 8370 13950 \\textsl{one new column}\001
+4 0 8 50 -1 0 10 0.0000 2 165 1440 7155 13725 \\textsl{link to}\001
+4 0 8 50 -1 0 10 0.0000 2 165 1800 7200 13860 \\textsl{old columns}\001
+4 0 12 50 -1 0 10 0.0000 2 165 2070 8370 13950 \\textsl{one new column}\001
+4 1 0 50 -1 0 10 0.0000 2 135 1260 6345 13275 source dataset\001
+4 1 0 50 -1 0 10 0.0000 2 135 1440 8055 14580 extended dataset\001
