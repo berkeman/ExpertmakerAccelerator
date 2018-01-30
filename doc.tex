@@ -139,9 +139,20 @@
 \clearpage
 \section{Executing Code: Jobs}
 The basic operation of the Accelerator is to execute small programs
-called \textsl{methods}.  A method is, simply put, a python program
-that instantates one or more special functions.
+called \textsl{methods}.  In a method, some reserved function names
+are used to execute code sequentially or in parallel and to pass
+parameters and results.  A method that has completed execution is
+called a \textsl{job}.
 
+The Accelerator keeps a record of all jobs that have been run.  It
+turns out this is very useful for avoiding unnecessary re-computing
+and instead rely on previosly computed results.  This does not only
+speed up processing and encourage incremental design, but also makes
+it transparent which code and which data was used for any particular
+result, thus reducing uncertainty.
+
+In this section, we'll look at basic job running, result sharing, and
+parameters.
 
 
 \subsection{Basic Job Running:  ``Hello, World''}
@@ -171,7 +182,7 @@ code or input parameters.
 
 Figure~\ref{fig:execflow-hello-world} illustrates the dispatch of the
 \texttt{hello\_world} method.  The created jobid is called
-\texttt{job\_0}, and corresponding directory information is shown in
+\texttt{test-0}, and corresponding directory information is shown in
 green.  The job directory contains several files, of which the most
 important ones right now are
 \begin{itemize}
@@ -182,7 +193,8 @@ important ones right now are
 \begin{figure}[h!]
   \begin{center}
     \input{figures/job0.pdftex_t}
-    \caption{A simple hello world program.}
+    \caption{A simple hello world program, represented as graph and
+      work directory.}
     \label{fig:execflow-hello-world}
   \end{center}
 \end{figure}
@@ -198,9 +210,10 @@ Assume that the job that we just run was computationally expensive,
 and that it returned a result that we'd like to use as input to further
 processing.
 
-To keep things simple, we create a method that just reads and prints
-the result from the previous job to \texttt{stdout}.  We create a new
-method \texttt{print\_result}, that goes like this
+To keep things simple, we demonstrate the principle by creating a
+method that just reads and prints the result from the previous job to
+\texttt{stdout}.  We create a new method \texttt{print\_result}, that
+goes like this
 
 \begin{python}
 import blob
@@ -218,13 +231,13 @@ the provided jobid and assigns it to the variable \texttt{x}, which is
 then printed to \texttt{stdout}.  Note that this method does not
 return anything.  Figure~\ref{fig:execflow-print-result} illustrates
 the situation.  Note the direction of the arrow - The second job,
-\texttt{job\_1} had \texttt{job\_0} as input parameter, but
-\texttt{job\_0} does not know of any jobs run in the future.
+\texttt{test-1} had \texttt{test-0} as input parameter, but
+\texttt{test-0} does not know of any jobs run in the future.
 
 \begin{figure}[h!]
   \begin{center}
     \input{figures/job0job1.pdftex_t}
-    \caption{Jobid \texttt{job\_0}, is used as input to the
+    \caption{Jobid \texttt{test-0}, is used as input to the
       \texttt{print\_result} job.}
     \label{fig:execflow-print-result}
   \end{center}
@@ -235,34 +248,46 @@ the situation.  Note the direction of the arrow - The second job,
 
 
 
-\subsection{Job Execution Flow}
+\subsection{Job Execution Flow and Result Passing}
 
 There are three functions in a method that are called from the
 Accelerator when a method is running, and they are \texttt{prepare()},
 \texttt{analysis()}, and \texttt{synthesis()}.  All three may exist in
-the same method, and then they are called in turn, but only one is
-required.
+the same method, and at least one is required.  When the method
+executes, they are called one after the other.
 \begin{itemize}
 \item[] \texttt{prepare()} is executed first.  The returned value is
-  available in the \texttt{prepare\_res} variable.
+  available in the variable \texttt{prepare\_res}.
 \item[] \texttt{analysis()} is run in parallel processes, one for each
   slice.  It is called after completion of \texttt{prepare()}.  Common
   input paramerers are \texttt{sliceno}, holding the number of the
-  process, and \texttt{prepare\_res}.  The return value for each
-  process is available in the \texttt{analysis\_res} variable.
-\item[] \texttt{synthesis()} is called after all
-  \texttt{analysis()}-processes are completed.  It is typically used
-  to aggregate parallel results created by \texttt{analysis()} and
-  takes both \texttt{prepare\_res} and \texttt{analysis\_res} as
-  optional parameters.  The latter is an iterator of the results
-  from the parallel processes.
+  current process instance, and \texttt{prepare\_res}.  The return
+  value for each process becomes available in the
+  \texttt{analysis\_res} variable.
+\item[] \texttt{synthesis()} is called after the last
+  \texttt{analysis()}-process is completed.  It is typically used to
+  aggregate parallel results created by \texttt{analysis()} and takes
+  both \texttt{prepare\_res} and \texttt{analysis\_res} as optional
+  parameters.  The latter is an iterator of the results from the
+  parallel processes.
 \end{itemize}
-See Figure~\ref{fig:prepanasyn}.
+Figure~\ref{fig:prepanasyn} shows the execution order from top to
+bottom, and the data passed between functions in coloured branches.
+\texttt{prepare()} is executed first, and its return value is
+available to both the \texttt{analysis()} and \texttt{synthesis()}
+functions.  There are \texttt{slices} (a configurable parameter)
+number of parallel \texttt{analysis()} processes, and their output is
+available to the \texttt{synthesis()} function, which is executed
+last.
+
+Return values from any of the three functions may be stored in the
+job's directory making them available to other jobs.
+
 
 \begin{figure}[h!]
   \begin{center}
     \input{figures/prepanasyn.pdftex_t}
-    \caption{Result propagation in a method.}
+    \caption{Execution flow and result propagation in a method.}
     \label{fig:prepanasyn}
   \end{center}
 \end{figure}
@@ -277,12 +302,12 @@ See Figure~\ref{fig:prepanasyn}.
 
 
 We've seen how jobids from completed jobs can be used as input to new
-ones.  This is one of three kinds of input parameters that a job can
-take.  Here the input parameters are summarised:
+jobs.  Jobid parameters is one of three kinds of input parameters that
+a job can take.  Here the input parameters are summarised:
 \begin{itemize}
-  \item[] \texttt{jobids}, a set of identifiers to previously executed jobs.
-  \item[] \texttt{options}, a dictionary of options;
-  \item[] \texttt{datasets}, a set of input \textsl{datasets}, explained later; and
+  \item[] \texttt{jobids}, a set of identifiers to previously executed jobs;
+  \item[] \texttt{options}, a dictionary of options; and
+  \item[] \texttt{datasets}, a set of input \textsl{datasets}, explained later.
 \end{itemize}
 See Figure~\ref{fig:execflow}.  Parameters are entered as global
 variables early in the method's source.
@@ -291,18 +316,13 @@ variables early in the method's source.
 
 \subsubsection{The Params Variable}
 A job's parameters are always available in the \texttt{params}
-variable.  For the current method, it is accessed by adding it as
-input to \texttt{prepare}, \texttt{analysis}, or \texttt{synthesis}, like this
+variable.  The \texttt{params} variable is make available by adding it
+as input to \texttt{prepare()}, \texttt{analysis()}, or
+\texttt{synthesis()}, like this
 \begin{python}
   def synthesis(params):
     print(params)
 \end{python}
-Apart from the input parameters, this variable also gives access to
-more information about the job and the current Accelerator setup, such
-as the total number of slices, the random seed, the hash of the source
-code, and method execution start time.
-
-
 Accessing the \texttt{params} variable for \textsl{another} job is
 done like this
 \begin{python}
@@ -313,6 +333,12 @@ done like this
 \end{python}
 it turns out it can be very useful to know for example which datasets
 another job has been processing, and so on.
+
+Apart from the input parameters, the \texttt{params} variable also
+gives access to more information about the job and the current
+Accelerator setup, such as the total number of slices, the random
+seed, the hash of the source code, and method execution start time.
+
 
 \begin{figure}[h!]
   \begin{center}
@@ -325,13 +351,15 @@ another job has been processing, and so on.
 \end{figure}
 
 
-\subsubsection{jobids}
-Any number of jobids can be supplied as input to a job.  For example
+\subsubsection{Input parameter \texttt{jobids}}
+The \texttt{jobids} parameter is a set containing any number of input
+jobids.  For example
 \begin{python}
   jobid = {'sales_stats', 'overhead_stats',}
 \end{python}
 
-\subsubsection{options}
+
+\subsubsection{Input parameter \texttt{options}}
 Options are supplied as a dictionary and is very flexible in typing.  For example
 \begin{python}
   options = dict(
@@ -344,8 +372,8 @@ Options are supplied as a dictionary and is very flexible in typing.  For exampl
 Here, values are defaults, so \texttt{param1} is default set to 1,
 while a floating point value must be supplied to \texttt{param2}.
 
-\subsubsection{datasets}
-Datasets will be described in more details later, but the
+\subsubsection{Input parameter \texttt{datasets}}
+Datasets will be described in more details later, and the
 \texttt{datasets} parameter is similar to the \texttt{jobids}
 parameter.
 
@@ -358,37 +386,36 @@ parameter.
 A recap and bit more flesh on the bones regarding jobs
 \begin{itemize}
 \item[1.]  Data and metadata relating to a job is stored in a job directory.
-\item[2.]  This job directory is pointed to by a jobid.
+\item[2.]  Jobids are pointers to such job directories.
 \end{itemize}
 The files stored in the job directory at dispatch are complete in the
 sense that they contain all information required to run the job.  So
 the Accelerator job dispatcher actually just creates processes and
-points them to the job directory.  Then, the processes have to go
-figure out the rest by themselves.
+points them to the job directory.  New processes have to go and figure
+out their purpose by themselves by looking in this directory.
 
 A running job has its \textsl{current working directory} pointing into
-the job directory, so any files created (plus return values) by a job
-will by default be stored in the job's directory.
+the job directory, so any files created by the job (including return
+values) will by default be stored in the job's directory.
 
-When the job completes, the files are updated with profiling
+When the job completes, the meta data files are updated with profiling
 infomation, such as execution time spent in single and parallel
 processing modes.
 
-All code that is directly related to the job is also stored in a
-compressed archive.  This arhive is typically limited to the method's
-source, but the code may have manually added dependencies to any other
-files, and in that case these are added too.  This way, source code
-and results are always connected and conveniently stored in the same
-directory for future reference.
+All code that is directly related to the job is also stored in the job
+directory in a compressed archive.  This arhive is typically limited
+to the method's source, but the code may have manually added
+dependencies to any other files, and in that case these will be added
+too.  This way, source code and results are always connected and
+conveniently stored in the same directory for future reference.
 \begin{itemize}
 \item[3.]  Unique jobs are only executed once.
 \end{itemize}
 Among the meta information stored in the job directory is a hash
 digest of the method's source code (including manually added
-dependencies).  This hash together with the input parameters is used
-to figure out if a result could be re-used instead of re-computed.  In
-the next section we'll see how this feature brings a number of
-advantages.
+dependencies).  This hash, together with the input parameters, is used
+to figure out if a result could be re-used instead of re-computed.  As
+we'll see, this brings a number of attractive advantages.
 \begin{itemize}
 \item[4.]  Jobs may link to eachother using jobids.
 \end{itemize}
@@ -401,8 +428,8 @@ This adds a layer of ``physical separation''.  All jobs relating to
 importing a set of data may be stored in one workdir, perhaps named
 \texttt{import}, and development work may be stored in a workdir
 \texttt{dev}, etc.  Jobids are created by appending a counter to the
-workdir name, so a job \texttt{dev\_42} may access data in
-\texttt{import\_3}, and so on, which helps manual inspection.
+workdir name, so a job \texttt{dev-42} may access data in
+\texttt{import-37}, and so on, which helps manual inspection.
 \begin{itemize}
 \item[7.] Jobs may dispatch other jobs.
 \end{itemize}
@@ -416,7 +443,16 @@ depth is defined to avoid infinite recursion.
 
 
 
-\subsection{Advantages}
+\subsection{Summary}
+In this chapter we have learnt what jobs are, how they are created,
+and how they may be linked.
+
+...
+...
+
+
+
+how to create jobs and how
 Let's have a short summary of what we've seen so far and what it
 means.  The fact that jobs may link to eachother combined with the
 fact that jobs may only be executed once brings a number of
