@@ -479,11 +479,14 @@ risk due to full observability.
 \section{Datasets: Storing Data}
 
 The \texttt{dataset} is the Accelerator's default storage type for
-small or large quantities of data.  Datasets are created by methods
-and stored in job directories, just like any job result.
+small or large quantities of data, designed for parallel processing
+and high performance.  Datasets are built on top of jobs, so
+\emph{datasets are created by methods and stored in job directories,
+  just like any job result.}
 
-Data is stored in a row-column format, and is typically sliced into a
-fixed number of slices to allow efficient parallell access.
+Internally, data in a dataset is stored in a row-column format, and is
+typically \emph{sliced} into a fixed number of slices to allow
+efficient parallell access.  Columns are accessed independently.
 Furthermore, datasets may be \textsl{hashed}, so that slicing is based
 on the hash value of a given column.  In many practical applications,
 hashing makes parallel processes independent, minimising the need for
@@ -505,15 +508,16 @@ figure~\ref{fig:dataset_csvimport}.
   \end{center}
 \end{figure}
 
-\noindent The standard method, \texttt{csvimport}, is used to parse a
-pletoria of ``comma separated values''-file format and store as a
-dataset.  The method takes several input options, where the file name
-is mandatory.  The created dataset is stored in a job, and the name of
-the dataset will by default be the jobid plus the string
-\texttt{default}.  For example, if the \texttt{csvimport} jobid is
-\texttt{imp\_0}, the dataset will be referenced by
-\texttt{imp\_0/default}.  In this case, and always when there is no
-ambiguity, the jobid alone (\texttt{imp\_0}) could be used too.
+\noindent The standard method \texttt{csvimport}, is designed to parse
+a pletoria of ``comma separated values''-file formats and store the
+data as a dataset.  The method takes several input options, where the
+file name is mandatory.  The created dataset is stored in the
+resulting job, and the name of the dataset will by default be the
+jobid plus the string \texttt{default}.  For example, if the
+\texttt{csvimport} jobid is \texttt{imp-0}, the dataset will be
+referenced by \texttt{imp-0/default}.  In this case, and always when
+there is no ambiguity, the jobid alone (\texttt{imp-0}) could be used
+too.
 
 \clearpage
 
@@ -522,11 +526,13 @@ ambiguity, the jobid alone (\texttt{imp\_0}) could be used too.
 
 \subsection{Linking Datasets, Chaining}
 
-Just like jobs, a key feature is that datasets can be linked to
-eachother.  Assume that we've just imported \texttt{file0.txt} into
-\texttt{imp\_0/default}.  Now, there is more data like it stored in
-\texttt{file1.txt}, we can import the latter file and supply a link to
-the previous dataset, see figure~\ref{fig:dataset_csvimport_chain}.
+Just like jobs can be linked to eachother, datasets can link to
+eachother too.  Since datasets are build on top of jobs, this is
+straightforward.  Assume that we've just imported \texttt{file0.txt}
+into \texttt{imp-0/default} and that there is more data like it stored
+in \texttt{file1.txt}.  We can import the latter file and supply a
+link to the previous dataset, see
+figure~\ref{fig:dataset_csvimport_chain}.
 
 \begin{figure}[h!]
   \begin{center}
@@ -537,13 +543,14 @@ the previous dataset, see figure~\ref{fig:dataset_csvimport_chain}.
   \end{center}
 \end{figure}
 
-\noindent The \texttt{imp\_1} dataset reference can now be used to
-access all data imported from both files!
+\noindent The \texttt{imp-1} (or \texttt{imp-1/default}) dataset
+reference can now be used to access all data imported from both files!
 
-Linking datasets containing related content is called
-\texttt{chaining}, and this is particularly convenient when dealing
-with data that grows over time.  A typical kind is log data, and it
-could be a log of transactions, user interactions, etc.
+Linking datasets containing related content is called \emph{chaining},
+and this is particularly convenient when dealing with data that grows
+over time.  Good example are all kind of \emph{log} data, such as logs
+of transactions, user interactions, etc.
+
 
 \clearpage
 
@@ -552,15 +559,16 @@ could be a log of transactions, user interactions, etc.
 
 \subsection{Multiple Datasets in a Job}
 
-Datasets are created by methods and stored in job directories.
-Typically, a method creates a single dataset in the job directory, but
-there is no limit on how many datasets that could be stored in a
-single job directory.  This leads to some interesting applications.
+We've seen that datasets are created by methods and stored in job
+directories.  Typically, a method creates a single dataset in the job
+directory, but there is no limit on how many datasets that could be
+created and stored in a single job directory.  This leads to some
+interesting applications.
 
-One situation where it is convenient to create multiple datasets in a
-job is when separating data into subsets based on some condition.  For
-example, assume that we want to separate a dataset into two disjoint
-datasets based on a column storing a boolean value.  See
+One application where it is convenient to create multiple datasets in
+a job is when splitting data into subsets based on some condition.
+For example, assume that we want to separate a dataset into two
+disjoint datasets based on a column storing a boolean value.  See
 Figure~\ref{fig:dep_dataset_csvimport_chain}.
 
 \begin{figure}[h!]
@@ -570,10 +578,12 @@ Figure~\ref{fig:dep_dataset_csvimport_chain}.
     \label{fig:dep_dataset_csvimport_chain}
 \end{figure}
 
-\noindent The figure show how \texttt{job\_1} has created two
-datasets, \texttt{job\_1/True} and \texttt{job\_1/False}, based on the
-input dataset \texttt{job\_0/default}.  A third job, \texttt{job\_2}
-is then accessing the \texttt{job\_1/True} dataset.
+The figure shows how \texttt{job-1} has created two datasets,
+\texttt{job-1/True} and \texttt{job-1/False}, based on the input
+dataset \texttt{job-0/default}.  A third job, \texttt{job-2} is then
+accessing the \texttt{job-1/True} dataset.  (Note that \texttt{job-1}
+does not have a \texttt{default} dataset.)
+
 
 
 %% Short repetition on the direction of the arrow.  \texttt{job\_1}
