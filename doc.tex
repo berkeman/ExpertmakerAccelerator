@@ -1,3 +1,4 @@
+
 \documentclass[a4paper]{article}
 \usepackage[pdftex]{graphicx,color}  % ab: for xfig pdf export
 %\usepackage{showframe}
@@ -137,6 +138,14 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \clearpage
+\section{TODOs}
+\begin{itemize}
+\item introduction with benefits
+\item describe \texttt{sliceno}, same for all sharing workdirs.
+\end{itemize}
+
+
+\clearpage
 \section{Executing Code: Jobs}
 The basic operation of the Accelerator is to execute small programs
 called \textsl{methods}.  In a method, some reserved function names
@@ -164,7 +173,8 @@ def synthesis():
     return "hello world"
 \end{python}
 This program does not take any input parameters.  It just returns a
-string and exits.
+string and exits.  Running methods on the Accelerator is further
+explained in section~\ref{sec:urd}.
 
 When execution of the method is completed, a single link, called a
 \texttt{jobid} is the only thing that is returned to the user.  The
@@ -490,7 +500,8 @@ efficient parallell access.  Columns are accessed independently.
 Furthermore, datasets may be \textsl{hashed}, so that slicing is based
 on the hash value of a given column.  In many practical applications,
 hashing makes parallel processes independent, minimising the need for
-complicated merging operations.
+complicated merging operations.  This is explained further in
+section~\ref{sec:dataset-hashing}.
 
 
 
@@ -551,6 +562,40 @@ and this is particularly convenient when dealing with data that grows
 over time.  Good example are all kind of \emph{log} data, such as logs
 of transactions, user interactions, etc.
 
+Using chaining, we can extend datasets with more rows just by linking,
+which is a very lightweight operation.
+
+\clearpage
+
+
+
+
+
+\subsection{Adding New Columns to a Dataset}
+We have seen how easy it is to add more lines to data to a dataset
+using chaining.  The only thing that needs to be done is to set a
+link, so the overhead is minimal.
+
+Now we'll see that is it equally simple to add new columns to an
+existing dataset.  Adding columns is also a common operation and the
+Accelerator handles it efficiently using links.
+
+The idea is very simple.  Assume that we have a ``source'' dataset to
+which we want to add a new column.  We create a new dataset containing
+\textsl{only} the new column, and while creating it we instruct the
+Accelerator to link the source dataset to the new column.
+
+Accessing the new one-column dataset will transparently access all the
+data in the source dataset too, making it indistinguishable from a
+single dataset.  See Figure~\ref{fig:dep_dataset_append_column}.
+
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/dataset_append_column.pdftex_t}
+    \caption{caption here}
+    \label{fig:dep_dataset_append_column}
+  \end{center}
+\end{figure}
 
 \clearpage
 
@@ -595,7 +640,8 @@ does not have a \texttt{default} dataset.)
 %% the dataset.  So there is full tracking and easy observability of
 %% everything that relates to job execution in the Accelerator.
 
-\noindent Let us look at an example of when such dataset splitting
+\emph{
+Let us look at an example of when such dataset splitting
 makes sense, and how it relates to the design methodology that the
 Accelerator is based upon.  Assume that we have a (perhaps large)
 dataset that we want to split into, say, a training set and a
@@ -604,47 +650,7 @@ dataset into two disjoint sets.  This way, we ``physically'' separate
 the data into two sets, while keeping all the data in the same place.
 This is good for transparency reasons, and any method following the
 split may iterate over both subsets to read the complete data.
-
-\clearpage
-
-
-
-
-%% \subsection{Understanding Datasets}
-%% A \texttt{dataset} is a storage of a matrix of data.  It has a number
-%% of rows and a number of columns.  The columns have names and types.
-%% In order to have fast parallell execution, the columns are split into
-%% a fixed number of \textsl{slices}.
-
-
-
-\subsection{Adding New Columns to a Dataset}
-We have seen how easy it is to add more lines to data to a dataset
-using chaining - the only thing that needs to be done is to set a
-link, so the overhead is minimal.
-
-Now we'll see that is it equally simple to add new columns to an
-existing dataset.  Adding columns is also a common operation and the
-Accelerator handles it efficiently using links.
-
-The idea is very simple.  Assume that we have a ``source'' dataset to
-which we want to add a new column.  We create a new dataset containing
-\textsl{only} the new column, and while creating it we instruct the
-Accelerator to link to source dataset as its \textsl{parent}.  The
-naming might not be perfect, but there it is.
-
-Accessing the new one-column dataset will transparently access all the
-data in the source dataset too, making it indistinguishable from a
-single dataset.  See Figure~\ref{fig:dep_dataset_append_column}.
-
-\begin{figure}[h!]
-  \begin{center}
-    \input{figures/dataset_append_column.pdftex_t}
-    \caption{caption here}
-    \label{fig:dep_dataset_append_column}
-  \end{center}
-\end{figure}
-
+}
 \clearpage
 
 
@@ -656,7 +662,8 @@ single dataset.  See Figure~\ref{fig:dep_dataset_append_column}.
 On a high level, the dataset stores a \textsl{matrix} of rows and
 columns.  Each column is represented by a column name, and all columns
 have the same number of rows.  Columns are typed, and there is a wide
-range of types available.
+range of types available.  Typing will be introduced in
+section~\ref{sec:dataset-typing}.
 
 The dataset is further split into disjoint slices, where each slice
 holds a unique subset of the dataset's rows.  Slicing makes simple but
@@ -678,7 +685,8 @@ single files with offset-indexing when appropriate.
 \begin{figure}[h!]
   \begin{center}
     \input{figures/dataset_concept.pdftex_t}
-    \caption{A dataset composed four columns that is sliced into three slices.}
+    \caption{A ``movie rating'' dataset composed of four columns
+      sliced into three slices.}
     \label{fig:slices}
   \end{center}
 \end{figure}
@@ -689,6 +697,7 @@ single files with offset-indexing when appropriate.
 
 
 \subsection{Dataset Column Types}
+\label{sec:dataset-typing}
 There are a number of useful types available for dataset columns.  They include
 \begin{itemize}
   \item[] \texttt{number}, which is float or int, up to $\pm(2^{1007}-1)$.
@@ -710,22 +719,22 @@ interpreted as dictionaries when operated upon.
 The dataset has a number of attributes associated with it.  The shape
 and number of rows are accessed like this
 \begin{python}
-  print(datasets.source.shape)
-  print(datasets.source.lines)
+  datasets.source.shape
+  datasets.source.lines
 \end{python}
 where \texttt{lines} returns a list with number of rows per slice.
 The total number of rows is the sum of this list.
 
 Each dataset may have a filename and a caption associated
 \begin{python}
-  print(datasets.source.filename)
-  print(datasets.source.caption)
+  datasets.source.filename
+  datasets.source.caption
 \end{python}
 which makes it easier to follow the data flow.  A common situation is
 to extract the column names or the type of a specific column.
 \begin{python}
-  print(datasets.source.columns.keys())
-  print(datasets.source.columns['movie'].type)
+  datasets.source.columns.keys()
+  datasets.source.columns['movie'].type
 \end{python}
 
 Interestingly, the Accelerator computes the maximum and minimum value
@@ -733,12 +742,12 @@ of each column when the dataset is created.  This is a simple
 operation that is done in linear time.  These values could be accessed
 like this
 \begin{python}
-  print(datasets.source.columns['rating'].min)
-  print(datasets.source.columns['rating'].max)
+  datasets.source.columns['rating'].min
+  datasets.source.columns['rating'].max
 \end{python}
 Max and min values are used when iterating over chains of sorted
 datasets, to quickly decide if a dataset is outside range and can be
-skipped in its entirety.
+skipped in its entirety, see section~\ref{sec:iterator-maxmin}.
 
 Other important attributes are the \texttt{hashlabel}, i.e.\ which
 column the dataset is hashed by, and the name of the \texttt{previous}
@@ -751,29 +760,32 @@ datasets, should it exist.
 
 \section{Datasets: Working with Data}
 
-In this section, we'll have a look at how to access the data stored in
-a dataset, and how to take advantage of slicing to have parallel
-processing.
+Data in a dataset is typically accessed using an \emph{iterator} that
+reads and streams one dataset slice at a time to a CPU core.  In this
+section, we'll have a look at iterators for reading data, how to take
+advantage of slicing to have parallel processing, and how to
+efficiently create datasets.
 
 \subsection{Iterator Basics}
 
 Assume that we have a dataset with a column containing movie titles
 named \texttt{movie}, and we want to know the ten most frequent
-titles.  Consider the following example of a complete method
+movies.  Consider the following example of a complete method
 \begin{python}
 from collections import Counter
 datasets = ('source',)
 
 def synthesis():
-    c = Counter(title for title in datasets.source.iterate(None, 'movie'))
+    c = Counter(movie for movie in datasets.source.iterate(None, 'movie'))
     print(c.most_common(10))
 \end{python}
-This will print the ten most common titles and their counts in the
-\texttt{source} dataset.  The code will run on a single CPU core,
-because of the \texttt{synthesis} function, which is called only once.
-The \texttt{iterate} (class-)method therefore has to read through all
-slices in a serial fashion, and this is reflected by the first
-argument being \texttt{None}.
+This will print the ten most common movie titles and their
+corresponding counts in the \texttt{source} dataset.  The code will
+run on a single CPU core, because of the \texttt{synthesis} function,
+which is called only once.  The \texttt{iterate} (class-)method
+therefore has to read through all slices, one at a time, in a serial
+fashion, and this is reflected by the first argument to the iterator
+being \texttt{None}.
 
 
 
@@ -783,7 +795,7 @@ are sliced, we can modify the above program to execute in parallel by
 doing the following modification
 \begin{python}
 def analysis(sliceno):
-    return Counter(title for title in datasets.source.iterate(sliceno, 'movie'))
+    return Counter(movie for movie in datasets.source.iterate(sliceno, 'movie'))
 
 def synthesis(analysis_res)
     c = analysis_res.merge_auto()
@@ -793,9 +805,9 @@ Here, we run \texttt{iterate} inside the \texttt{analysis()} function.
 This function is forked once for each slice, and the argument
 \texttt{sliceno} will contain an integer between zero and the number
 of slices minus one.  The returned value from the analysis functions
-will be available as input to the synthesis function in the iterator
-variable \texttt{analysis\_res}.  It is possible to merge the results
-explicitly, but the iterator comes with a rather magic method
+will be available as input to the synthesis function in the
+\texttt{analysis\_res} Python iterable.  It is possible to merge the
+results explicitly, but the iterator comes with a rather magic method
 \texttt{merge\_auto()}, which merges the results from all slices into
 one based on the data type.  It can for example merge
 \texttt{Counter}s, \texttt{set}s, and composed types like
@@ -807,32 +819,34 @@ one based on the data type.  It can for example merge
 
 
 \subsection{Iterating over Several Columns}
-Since data is stored independently for each column there is no
+Since each column is stored independently in a dataset, there is no
 overhead from reading a subset of a dataset's columns.  In the
-previous sections we've seen how to iterate over a single column using
+previous section we've seen how to iterate over a single column using
 \texttt{iterate}.  Iterating over more columns is straightforward by
-feeding a list of column names to \texttt{iterate}, like shown in this
+feeding a list of column names to \texttt{iterate}, like in this
 example
 \begin{python}
 from collections import defaultdict
 datasets = {'source',}
 
 def analysis(sliceno):
-  user2titleset = defaultdict(set)
-  for user, title in datasets.source.iterate(sliceno, ('user', 'movie')):
-    user2titleset[user].add(title)
-  return user2titleset
+  user2movieset = defaultdict(set)
+  for user, movie in datasets.source.iterate(sliceno, ('user', 'movie')):
+    user2movieset[user].add(movie)
+  return user2movieset
 \end{python}
 This example creates a lookup dictionary from users to sets of movies.
-It is also possible to iterate over all columns by leaving the name
-list empty or specifying the column list to be \texttt{None}
+It is also possible to iterate over all columns by specifying an empty
+list of columns or by using the value \texttt{None}.
 \begin{python}
-  ...
+...
+def analysis(sliceno):
   for columns in datasets.source.iterate(sliceno, None):
     print(columns)
     break
 \end{python}
-This example will print the first row of a dataset and then exit.
+This example will print the first row for each slice of a dataset and
+then exit.
 
 \clearpage
 
@@ -853,24 +867,24 @@ datasets.  This function takes a number of arguments, such as
   between datasets.
 \item[] \texttt{stop\_jobid} which stops iterating at a certain jobid.
   This jobid could be from \textsl{another} job's parameters, so we
-  can for example iterate exactly over new datasets not covered by a
-  previous job.
+  can for example iterate exactly over all new datasets not covered by
+  a previous job.
 
 \item[] \texttt{range}, which allows for iterating over a range of
   data.
 \end{itemize}
 The \texttt{range} options is based on the max/min values stored for
 each column in the dataset.  Assuming that the chain is sorted, one
-can for example set 
-\mintinline{python}{range={timestamp, ('2016-01-01', '2016-01-31')}}
+can for example set \mintinline{python}{range={timestamp, ('2016-01-01', '2016-01-31')}}
 in order to get rows within the specified range only.  The %
 \texttt{range} is quite costly, since it requires each row in the
-dataset chain with dates within the range to be checked against the range
-criterion.  Therefore, there is a \texttt{sloppy} version that
-iterates over complete datasets in the chain that contains dates
-within the range.  This is useful, for example, to very quickly
-produce histograms or plots of subsets of the data.
+dataset chain with dates within the range to be checked against the
+range criterion.  Therefore, there is a \texttt{sloppy} version that
+iterates over complete datasets in the chain that contains at least
+one row with a date within the range.  This is useful, for example, to
+very quickly produce histograms or plots of subsets of the data.
 
+\clearpage
 
 
 
@@ -892,11 +906,14 @@ using the \texttt{translators} and \texttt{filters} options.  Here is
 an example of how a dictionary can be fed into the iterator to map a
 column
 \begin{python}
-  mapper = {2: ’HUMANLIKE’, 4: ’LABRADOR’, 5: ’STARFISH’,}
+  mapper = {2: "HUMANLIKE", 4: "LABRADOR", 5: "STARFISH",}
   for animal in datasets.source.iterate_chain(sliceno, \
-     ’NUM_LEGS’, translator={’NUM_LEGS’: mapper,}):
+     "NUM_LEGS", translator={"NUM_LEGS": mapper,}):
   ...
 \end{python}
+This will iterate over the \texttt{NUM\_LEGS} column, and map numbers
+to strings according to the \texttt{mapper} dict.
+
 Filters work similarly.
 
 \clearpage
@@ -925,7 +942,9 @@ achieve rehashing.
 \begin{figure}[h!]
   \begin{center}
     \input{figures/rehash.pdftex_t}
-    \caption{caption}
+    \caption{Parallel rehash.  Each slice is hashed by its
+      \texttt{analysis()} process into a full dataset.  All datasets
+      are then chained.}
     \label{fig:rehash}
   \end{center}
 \end{figure}
@@ -948,7 +967,11 @@ datasets in the chain back into a single dataset again.
 
 \section{Automatas:  Using Urd}
 Let's turn our focus to how to call and run methods.  Methods are
-called from a script which is called an \textsl{automata}.
+called from a script which is called an \textsl{automata}.  Automatas
+are used to run sequences of methods, and store the resulting jobids
+in lists 
+
+
 
 The \texttt{automatarunner} command is used to execute automatas, and
 it calls the \texttt{main()} function, to which it provides an input
@@ -961,16 +984,68 @@ server, to which it may read and write results from automata operations.
 A very basic one is shown below
 \begin{python}
 def main(urd):
-  jid = urd.build('hello_world')
+  jid_hello = urd.build('hello_world')
 \end{python}
-
+This automata just calls the texttt{hello\_world} method and exits at
+method completion.  The returned value is stored in the
+\texttt{jid\_hello} variable, and holds the jobid to the corresponding
+job.
 
 \subsection{Example of Dependencies}
+The following example calls the \texttt{print\_result} method and
+feeds it with the jobid from the \texttt{hello\_world} job.
 \begin{python}
 def main(urd):
-  jid = urd.build('hello_world')
-  jid2 = urd.build('print_result', jobids=dict(hello_world_job=jid))
+  jid_hello = urd.build('hello_world')
+  jid_print = urd.build('print_result', jobids=dict(hello_world_job=jid_hello))
 \end{python}
+
+\clearpage
+
+
+
+\subsection{The Joblist}
+Internally, the \texttt{urd} object stores a list of methods that have
+been executed.  This list can, as we'll se later, be stored to disk
+for later use.  The current joblist can be pretty-printed like this
+\begin{python}
+  print(urd.joblist.pretty)
+\end{python}
+and this will yield something like
+\begin{minted}{text}
+JobList(
+  [  0] hello_world  : job_0
+  [  1] print_result : job_1
+)
+\end{minted}
+The default name for an entry is the name of the method, but the name
+could be overided using the \texttt{name} option to
+\texttt{build()}.
+Any job could be accessed from the joblist
+\begin{python}
+  print(urd.joblist['hello_world'])
+\end{python}
+accessing the latest jobid is a common operation, and it is done as follows
+\begin{python}
+  urd.build('hello_world')
+  urd.build('print_result', jobids=dict(hello_world_job=urd.joblist.jobid))
+\end{python}
+
+
+\subsection{Recording Lists of Jobs}
+A key functionality of Urd is the possibility to store sets of jobs
+for later reuse.  Jobs are stored in what is called \textsl{joblists},
+and this happens by default inside the \texttt{urd} object.
+
+\begin{python}
+def main(urd):
+  urd.begin('hello', '2017-12-14')
+  urd.build('hello_world')
+  urd.finish('hello')
+\end{python}
+The code above appends the joblist to a log in Urd with key
+\texttt{hello} and date \texttt{2017-12-14}.
+
 
 \end{document}
 
