@@ -695,6 +695,53 @@ single files with offset-indexing when appropriate.
 
 \clearpage
 
+\subsection{Hashed Datasets}
+
+A dataset is separated into a number of slices.  There are many ways
+how to assign data rows to slices.  For example, datasets created by
+\texttt{csvimport} use a round-robin scheme when assigning rows to
+slices.  So, row $n$ of the input is assigned to slice $n$ mod $N$,
+where $N$ is the number of slices.
+\begin{equation}
+  \textrm{row}~n \longrightarrow \textrm{slice}~(n~\textrm{mod}~N)
+\end{equation}
+This leads to a well balanced set of slices, where each slice contains
+as far as possible the same number of rows.  Being well balanced is a
+good property for parallel processing, but it is suboptimal for common
+scenarios, as we will see next.
+
+Assume that we have a dataset composed of words of text, The
+dictionary is very large, and each word typically appears more than
+once.  In this scenario, using a round robin slicing scheme, it is
+likely that a word appears in more than one slice.  If we are to count
+all words using parallel \texttt{analysis()}-processes, one for each
+slice, we will end up counting the same words in several processes,
+leading to excessive storage and a merge that needs to look at the
+output for all processes in order to compute the total count for each
+word.
+
+It is much more efficient if we can assure that each word only appears
+in one slice.  This is easy if we separate the rows into slices based
+on the hash of the word, i.e.
+\begin{equation}
+  \textrm{row}~n \longrightarrow \textrm{slice}~(\textrm{hash}(\textrm{word})~\textrm{mod}~N)
+\end{equation}
+Now, there is no need to explicitly merge the \texttt{analysis()}
+results anymore, since they are independent.  Merging them is trivial.
+
+Some care has to be taken to make sure that the dataset is not too
+unbalanced, i.e.\ that the number of rows per slice is more or less
+the same.  It is common to hash a dataset based on a column that is
+created as a function of existing columns.  This is how to hash on
+more than one column.
+
+
+
+
+
+
+
+\clearpage
 
 
 
