@@ -138,11 +138,24 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \clearpage
-\section{TODOs}
+\section{Overview}
+The Accelerator is a tool for fast data processing.  It has been in
+use since 2012 in a number of different projects.  Most project have
+been related to data analysis, some to optimisation, and some projects
+have been live-running recommendation systems for years.  The
+Accelerator has evolved from being the base of these projects.
+
+
+On a high level, the Accelerator's main design goals are
 \begin{itemize}
-\item introduction with benefits
-\item describe \texttt{sliceno}, same for all sharing workdirs.
+\item[] Make parallel processing simple.  Modern computers come with
+  several cores, it should be straightforward to make use of them.
+\item[] Make access to data really fast.
+\item[] Never recompute old results, always recycle jobs, when
+  possible.
 \end{itemize}
+
+
 
 
 \clearpage
