@@ -619,14 +619,16 @@ Figure~\ref{fig:dep_dataset_csvimport_chain}.
 \begin{figure}[h!]
   \hspace{1cm}
   \input{figures/filter_dataset.pdftex_t}
-    \caption{caption here}
+    \caption{\texttt{job-1} separates the dataset
+      \texttt{job-0/default} into two new datasets, named
+      \texttt{job-1/train} and \texttt{job-1/test}.}
     \label{fig:dep_dataset_csvimport_chain}
 \end{figure}
 
 The figure shows how \texttt{job-1} has created two datasets,
-\texttt{job-1/True} and \texttt{job-1/False}, based on the input
+\texttt{job-1/train} and \texttt{job-1/test}, based on the input
 dataset \texttt{job-0/default}.  A third job, \texttt{job-2} is then
-accessing the \texttt{job-1/True} dataset.  (Note that \texttt{job-1}
+accessing the \texttt{job-1/train} dataset.  (Note that \texttt{job-1}
 does not have a \texttt{default} dataset.)
 
 
