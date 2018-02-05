@@ -916,6 +916,66 @@ to strings according to the \texttt{mapper} dict.
 
 Filters work similarly.
 
+
+
+\clearpage
+
+\section{Performance Discussion}
+Now that we have seen how datasets are build and how to access them
+efficiently using iterators, it is time to highlight the main reasons
+why the Accelerator is so efficient.
+
+The Accelerator is build bottom up for highest possible performance.
+The design is based on the properties of modern computer architecture,
+and we have assumed that Moore's law is still valid.  Moore's law
+states that for a constant cost, the number of transistors on a chip
+grows exponentially over time.  In practice, this means that we'll see
+more CPU cores, larger caches, and larger primary storage in the
+future.
+
+For various reasons, there are bandwidth bottlenecks between CPU cores
+and primary (RAM) storage, and also between primary and secondary
+(disk) storage, as well as in interconnection between computers.
+
+The Accelerator is ideal in scenarios where we use large parts or all
+of the available data.  It then makes sence to stream the data,
+instead of accessing each row in a way that is difficult for the
+storage to predict.
+
+We can then summarise these reasons
+\begin{itemize}
+  \item[] Data is split into one column per file, so we only read the
+    data that we actually need.  This minimises bandwidth.
+    
+  \item[] Due to slicing and multi core computer architectures, data
+    is read and processed in parallel.
+
+  \item[] Reading data continuously from disk minimises seek times.
+
+  \item[] Continuous reads also maximise cache memory hits, All data
+    read into the cache is actually being used.
+
+  \item[] Data compression reduces bandwidth with up to a magnitude.
+    Modern CPUs handle compression with very little effort
+
+  \item[] Consecutive linked jobs maximise use of operating system
+    disk buffers.  Data from one job could be read by the next from
+    the in RAM buffer, not needing to wait for it to be stored in
+    physical disk first.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+
+
 \clearpage
 
 
