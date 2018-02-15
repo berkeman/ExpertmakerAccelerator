@@ -92,12 +92,13 @@ class Main:
 	def update_methods(self):
 		try:
 			self._update_methods()
-			self.update_database()
 			self.broken = False
 		except methods.MethodLoadException as e:
 			self.broken = e.module_list
 			return {'broken': e.module_list}
 
+	def update_workdirs(self):
+		self.update_database()
 
 	def set_workspace(self, workspacename):
 		""" set current workspace by name, and clear all remotes, just to be sure """

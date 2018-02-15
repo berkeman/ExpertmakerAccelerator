@@ -259,6 +259,9 @@ class Automata:
 	def methods_info(self):
 		return self._url_json('methods')
 
+	def update_workdirs(self):
+		return self._url_json('update_workdirs')
+
 	def update_methods(self):
 		resp = self._url_get('update_methods')
 		self.update_method_deps()

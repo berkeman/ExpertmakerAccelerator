@@ -113,7 +113,12 @@ class XtdHandler(BaseWebHandler):
 		elif path==['config']:
 			self.do_response(200, "text/json", self.ctrl.config)
 
+		elif path==['update_workdirs']:
+			""" scan all workdirs and update internal database with new jobs """
+			self.do_response(200, "text/json", self.ctrl.update_database())
+
 		elif path==['update_methods']:
+			""" scan all method directories and update internal database """
 			self.do_response(200, "text/json", self.ctrl.update_methods())
 
 		elif path==['methods']:
