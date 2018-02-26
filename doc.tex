@@ -1228,6 +1228,76 @@ The code above appends the joblist to a log in Urd with key
 \texttt{hello} and date \texttt{2017-12-14}.
 
 
+
+
+\clearpage
+\appendix
+
+\section{Practicalities}
+
+\subsection{Urd authorities}
+\begin{minted}{text}
+URD_AUTH=user:passwd ./automatarunner test
+\end{minted}
+
+\subsection{Workdirs}
+The Accelerator can ``see'' many workdirs, but only write to one.  The
+idea is that jobs could be shared between installations and users, but
+a running Accelerator can only modify (append to) a designated target
+workdir.
+
+For example, import workdir, process workdir, and development workdir.
+dev could be whiped without affecting the other workdirs.
+
+
+\subsection{A Project Skeleton}
+It is encouraged to embed the Accelerator as a git submodule in the
+project.  This way, the Accelerator and the project are treated
+independently by git, but the project points to a specific commit of
+the Accelerator.  This way, projects and the Accelerator can be
+developed independently while ensuring compatibility.
+
+\subsection{The Configuration File}
+
+Different configuration files for different parts of a project or target\_workdirs
+
+
+\subsection{Method directories}
+By default, methods are stored in a directory called \texttt{dev}.
+This is determined using the 
+
+Method filenames must begin with \texttt{a\_}.  So, for example, a
+method \texttt{test} is stored as \texttt{a\_text.py}.  The reason for
+this is historical.  It limits the number of possible files that may
+be executed by the Accelerator by mistake, and this makes sense in a
+production scenario.
+
+Furthermore, for a method to be recognised by the Accelerator, the
+name of the method must be entered in the \texttt{methods.conf} file
+in the current method directory.  The name should be used, not the
+filename.  In \texttt{methods.conf}, it is also possible to specify
+which Python version that should be used when executing the method.
+
+Example:
+\begin{minted}{text}
+# this is a methods.conf example
+test            py3
+\end{minted}
+
+
+
+
+
+
+
+
+
+\subsection{The automatarunner}
+
+
+
+
+
 \end{document}
 
 \clearpage
