@@ -142,22 +142,77 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \clearpage
+\section{Introduction}
+The Accelerator is a tool for fast data processing.  Typical
+applications include data analysis as well as live production systems
+for varous data processing tasks, such as recommendation systems, and
+more.  It has a small footprint and runs on laptops as well as rack
+servers.
+
+It was first used in 2012, and has been continuously developed and
+improved since.  In 2016, it was aquired by Ebay, who decided to open
+source it early 2018.
+
+
+
+\subsection{History}
+The Accelerator has been in use since 2012 in a number of different
+projects.  Most project have been related to data analysis, some to
+optimisation, and some projects have been live-running recommendation
+systems for years.  The Accelerator has evolved from being the core of
+these projects.
+
+Data set sizes in these projects range from a few hundred lines up to
+several tens of billions rows with multiple columns.  The number of
+items in a dataset used in a live system was well above $10^{11}$, and
+this was handled with ease on a \emph{single} 32 core computer.
+
+
+\subsection{Authors and Git Repository}
+The authors are Anders Berkeman, Carl Drougge, and Sofia H\"orberg.
+About 1500 commits have been removed to clean up the open version of
+the code base.  Extensive testing has been done by Stefan Hakonsson.
+
+
+\clearpage
 \section{Overview}
-The Accelerator is a tool for fast data processing.  It has been in
-use since 2012 in a number of different projects.  Most project have
-been related to data analysis, some to optimisation, and some projects
-have been live-running recommendation systems for years.  The
-Accelerator has evolved from being the base of these projects.
 
 
-On a high level, the Accelerator's main design goals are
+
+
+\subsection{Main Design Goals}
+The Accelerator is developed bottom up for high performance and
+simplicity, and the main design goals are
 \begin{itemize}
-\item[] Make parallel processing simple.  Modern computers come with
-  several cores, it should be straightforward to make use of them.
-\item[] Make access to data really fast.
+\item[] Parallel processing should be made simple.  Modern computers
+  come with several cores, it should be straightforward to make use of
+  them.
+\item[] Make access to data really fast.  It should be possible to
+  process large datasets, even on commodity hardware.
 \item[] Never recompute old results, always recycle jobs, when
-  possible.
+  possible.  Also, sharing results between multiple users should be
+  effortless.
 \end{itemize}
+In addition, the Accelerator is designed to be used in all levels of a
+project, including data analysis, algorithm development, as well as
+production.  Using the same tool for analysis and production closes
+the loop between input and output, making it really simple to analyse
+and get insights from the whole system.
+
+\subsection{High Level View}
+
+The Accelerator is a client-server based application, and the current
+setup is as follows.
+
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/overview.pdftex_t}
+    \caption{}
+    \label{fig:overview}
+  \end{center}
+\end{figure}
+
+
 
 
 
