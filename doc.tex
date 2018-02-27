@@ -218,7 +218,7 @@ setup is as follows.
 
 
 \clearpage
-\section{Executing Code: Jobs}
+\section{Jobs:  Executing Code}
 The basic operation of the Accelerator is to execute small programs
 called \textsl{methods}.  In a method, some reserved function names
 are used to execute code sequentially or in parallel and to pass
@@ -396,7 +396,7 @@ variables early in the method's source.
 
 
 
-\subsubsection{The Params Variable}
+\subsubsection*{The Params Variable}
 A job's parameters are always available in the \texttt{params}
 variable.  The \texttt{params} variable is make available by adding it
 as input to \texttt{prepare()}, \texttt{analysis()}, or
@@ -433,7 +433,7 @@ seed, the hash of the source code, and method execution start time.
 \end{figure}
 
 
-\subsubsection{Input parameter \texttt{jobids}}
+\subsubsection*{Input parameter \texttt{jobids}}
 The \texttt{jobids} parameter is a set containing any number of input
 jobids.  For example
 \begin{python}
@@ -441,7 +441,7 @@ jobids.  For example
 \end{python}
 
 
-\subsubsection{Input parameter \texttt{options}}
+\subsubsection*{Input parameter \texttt{options}}
 Options are supplied as a dictionary and is very flexible in typing.  For example
 \begin{python}
   options = dict(
@@ -454,11 +454,10 @@ Options are supplied as a dictionary and is very flexible in typing.  For exampl
 Here, values are defaults, so \texttt{param1} is default set to 1,
 while a floating point value must be supplied to \texttt{param2}.
 
-\subsubsection{Input parameter \texttt{datasets}}
+\subsubsection*{Input parameter \texttt{datasets}}
 Datasets will be described in more details later, and the
 \texttt{datasets} parameter is similar to the \texttt{jobids}
 parameter.
-
 
 \clearpage
 
@@ -879,7 +878,7 @@ datasets, should it exist.
 
 
 
-\section{Datasets: Working with Data}
+\section{Iterators: Working with Data}
 
 Data in a dataset is typically accessed using an \emph{iterator} that
 reads and streams one dataset slice at a time to a CPU core.  In this
@@ -1041,7 +1040,7 @@ Filters work similarly.
 
 \clearpage
 
-\section{Performance Discussion}
+\section{Why the Accelerator is so Efficient:  Performance Discussion}
 Now that we have seen how datasets are build and how to access them
 efficiently using iterators, it is time to highlight the main reasons
 why the Accelerator is so efficient.
