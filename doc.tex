@@ -1146,7 +1146,7 @@ datasets in the chain back into a single dataset again.
 
 
 
-\section{Automatas:  Using Urd}
+\section{Automata:  Using Urd}
 Let's turn our focus to how to call and run methods.  Methods are
 called from a script which is called an \textsl{automata}.  Automatas
 are used to run sequences of methods, and store the resulting jobids
@@ -1162,15 +1162,38 @@ The \texttt{urd} object also communicates with the \texttt{urd}
 server, to which it may read and write results from automata operations.
 
 \subsection{A Simple Example}
-A very basic one is shown below
+The following is an example of a complete automata that executes a
+method named \texttt{hello\_world}.  The automata code has to be
+written inside a function named \texttt{main} that provides an urd
+object that has a number of member functions such as \texttt{build}
+that is used in this case.
 \begin{python}
 def main(urd):
   jid_hello = urd.build('hello_world')
 \end{python}
-This automata just calls the texttt{hello\_world} method and exits at
-method completion.  The returned value is stored in the
+This automata just calls the \texttt{hello\_world} method, and exits
+at method completion.  The returned value is stored in the
 \texttt{jid\_hello} variable, and holds the jobid to the corresponding
-job.
+job.  Note that if the job has been executed already, the Accelerator
+will immediately return the corresponding jobid without executing the
+method again.
+
+\subsection{Supplying Options}
+Normally, a method takes some options and dataset input parameters.
+These are fed to the job using dicts, like this
+\begin{python}
+  jid = urd.build('example_method',
+    options=dict(
+      n=17,
+      mapper=dict(a:1, b:2),
+    ),
+    datasets=dict(
+      source=jobid_imported_data,
+    )
+  )  
+\end{python}
+
+\clearpage
 
 \subsection{Example of Dependencies}
 The following example calls the \texttt{print\_result} method and
@@ -1178,7 +1201,9 @@ feeds it with the jobid from the \texttt{hello\_world} job.
 \begin{python}
 def main(urd):
   jid_hello = urd.build('hello_world')
-  jid_print = urd.build('print_result', jobids=dict(hello_world_job=jid_hello))
+  jid_print = urd.build('print_result',
+    jobids=dict(hello_world_job=jid_hello)
+  )
 \end{python}
 
 \clearpage
@@ -1186,33 +1211,53 @@ def main(urd):
 
 
 \subsection{The Joblist}
-Internally, the \texttt{urd} object stores a list of methods that have
-been executed.  This list can, as we'll se later, be stored to disk
-for later use.  The current joblist can be pretty-printed like this
+Internally, the \texttt{urd} object stores a list of names and jobids
+to methods that have been executed.  This list is available to the
+running automata, but it is far more useful.  Joblists may be recorded
+to disk and retrieved by other automatas in order to realise advanced
+dependencies between programs and data with little effort and a high
+level of tranparency.
+
+THIS SHOULD PROBABLY TO TO SECTION START
+
+Here is a simple example pretty-printing the current joblist
 \begin{python}
+def main(urd):
+  jid_hello = urd.build('hello_world')
+  jid_print = urd.build('another_method')
   print(urd.joblist.pretty)
 \end{python}
 and this will yield something like
 \begin{minted}{text}
 JobList(
-  [  0] hello_world  : job_0
-  [  1] print_result : job_1
+  [  0] hello_world    : job-0
+  [  1] another_method : job-1
 )
 \end{minted}
-The default name for an entry is the name of the method, but the name
-could be overided using the \texttt{name} option to
-\texttt{build()}.
-Any job could be accessed from the joblist
+The default name for a joblist entry is the name of the method, but
+the name could be overided using the \texttt{name} option to
+\texttt{build()}.  Any job could be accessed from the joblist using
+its name, for example
 \begin{python}
-  print(urd.joblist['hello_world'])
+  print(urd.joblist['hello_world'].jobid)
 \end{python}
-accessing the latest jobid is a common operation, and it is done as follows
-\begin{python}
-  urd.build('hello_world')
-  urd.build('print_result', jobids=dict(hello_world_job=urd.joblist.jobid))
-\end{python}
+will return \texttt{job-0}.
 
 
+Accessing the latest jobid is a common operation, and there is a
+shortcut for it.  The latest built job may always be retrieved using
+\texttt{urd.joblist.jobid}, for example
+\begin{python}
+  print(urd.joblist.jobid)
+\end{python}
+will return \texttt{job-1}.
+
+
+
+
+
+\clearpage
+\section{Urd: Advanced Job Book keeping}
 \subsection{Recording Lists of Jobs}
 A key functionality of Urd is the possibility to store sets of jobs
 for later reuse.  Jobs are stored in what is called \textsl{joblists},
