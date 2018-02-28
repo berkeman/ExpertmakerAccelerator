@@ -145,6 +145,9 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \clearpage
+%\section{XXXX}
+%mera ``log based''.
+
 \section{Introduction}
 The Accelerator is a tool for fast data processing.  Typical
 applications include data analysis as well as live production systems
@@ -153,8 +156,8 @@ more.  It has a small footprint and runs on laptops as well as rack
 servers.
 
 It was first used in 2012, and has been continuously developed and
-improved since.  In 2016, it was aquired by Ebay, who decided to open
-source it early 2018.
+improved since.  In 2016, it was aquired by Ebay, who open sourced it
+early 2018.
 
 
 
@@ -171,7 +174,7 @@ items in a dataset used in a live system was well above $10^{11}$, and
 this was handled with ease on a \emph{single} 32 core computer.
 
 
-\subsection{Authors and Git Repository}
+\subsection{Authors and Git History}
 The authors are Anders Berkeman, Carl Drougge, and Sofia H\"orberg.
 About 1500 commits have been removed to clean up the open version of
 the code base.  Extensive testing has been done by Stefan Hakonsson.
@@ -311,13 +314,14 @@ def synthesis():
 \end{python}
 
 This method expects the \texttt{hello\_world\_job} input parameter to
-be provided at execution time.  The method then reads the result from
-the provided jobid and assigns it to the variable \texttt{x}, which is
-then printed to \texttt{stdout}.  Note that this method does not
-return anything.  Figure~\ref{fig:execflow-print-result} illustrates
-the situation.  Note the direction of the arrow - The second job,
-\texttt{test-1} had \texttt{test-0} as input parameter, but
-\texttt{test-0} does not know of any jobs run in the future.
+be provided at execution time, and we will see in section~\ref{xxx}
+how to do this.  The method then reads the result from the provided
+jobid and assigns it to the variable \texttt{x}, which is then printed
+to \texttt{stdout}.  Note that this method does not return anything.
+Figure~\ref{fig:execflow-print-result} illustrates the situation.
+Note the direction of the arrow - The second job, \texttt{test-1} had
+\texttt{test-0} as input parameter, but \texttt{test-0} does not know
+of any jobs run in the future.
 
 \begin{figure}[h!]
   \begin{center}
@@ -442,6 +446,8 @@ jobids.  For example
 \begin{python}
   jobid = {'sales_stats', 'overhead_stats',}
 \end{python}
+When a method is to be executed, actual links to jobs, i.e.\ jobids,
+are passed using these parameters.
 
 
 \subsubsection*{Input parameter \texttt{options}}
@@ -1043,7 +1049,8 @@ Filters work similarly.
 
 \clearpage
 
-\section{Why the Accelerator is so Efficient:  Performance Discussion}
+%\section{Why the Accelerator is so Efficient:  Performance Discussion}
+\section{Performance Discussion}
 Now that we have seen how datasets are build and how to access them
 efficiently using iterators, it is time to highlight the main reasons
 why the Accelerator is so efficient.
@@ -1075,8 +1082,8 @@ We can then summarise these reasons
 
   \item[] Reading data continuously from disk minimises seek times.
 
-  \item[] Continuous reads also maximise cache memory hits, All data
-    read into the cache is actually being used.
+  \item[] Continuous reads is cache oblivious and maximises cache
+    memory hits. All data read into the cache is actually being used.
 
   \item[] Data compression reduces bandwidth with up to a magnitude.
     Modern CPUs handle compression with very little effort
@@ -1180,9 +1187,10 @@ job.  Note that if the job has been executed already, the Accelerator
 will immediately return the corresponding jobid without executing the
 method again.
 
-\subsection{Supplying Options}
-Normally, a method takes some options and dataset input parameters.
-These are fed to the job using dicts, like this
+\subsection{Supplying Method Parameters}
+Normally, a method takes some input parameters.  As we have seen in
+section~\ref{xxx}, these might be options, datasets, and jobids.  They
+are all provided using \texttt{dict}s.  Here is an artificial example
 \begin{python}
   jid = urd.build('example_method',
     options=dict(
@@ -1190,10 +1198,14 @@ These are fed to the job using dicts, like this
       mapper=dict(a:1, b:2),
     ),
     datasets=dict(
-      source=jobid_imported_data,
-    )
-  )  
+      source=jobid_to_imported_data,
+    ),
+    jobids=dict(
+      model=jobid_to_my_model,
+    ),
+  )
 \end{python}
+
 
 \clearpage
 
@@ -1204,7 +1216,9 @@ feeds it with the jobid from the \texttt{hello\_world} job.
 def main(urd):
   jid_hello = urd.build('hello_world')
   jid_print = urd.build('print_result',
-    jobids=dict(hello_world_job=jid_hello)
+    jobids=dict(
+      hello_world_job=jid_hello,
+    )
   )
 \end{python}
 
@@ -1260,11 +1274,14 @@ will return \texttt{job-1}.
 
 \clearpage
 \section{Urd: Advanced Job Book keeping}
-\subsection{Recording Lists of Jobs}
-A key functionality of Urd is the possibility to store sets of jobs
-for later reuse.  Jobs are stored in what is called \textsl{joblists},
-and this happens by default inside the \texttt{urd} object.
+A key functionality of Urd is the possibility to store sets of jobs,
+actually joblists, to disk to be shared and used later.
 
+\subsection{Recording Lists of Jobs}
+Recording of urd events to disk is active onle between the
+\texttt{urd.begin} and \texttt{urd.finish} function calls.  So, for
+example, to record a very simple joblist consisting of running the
+\texttt{hello\_world} method only, we can do like this
 \begin{python}
 def main(urd):
   urd.begin('hello', '2017-12-14')
@@ -1274,11 +1291,105 @@ def main(urd):
 The code above appends the joblist to a log in Urd with key
 \texttt{hello} and date \texttt{2017-12-14}.
 
+\subsection{A Realistic Example}
+Assume that we are developing some kind of predictor.  The predictor
+is trained on some data that arrives as log files, named for
+simplicity using a date.  After training, the predictor is validated.  Then, it is ready to be used for some predicition task
 
+\subsubsection*{1.  Importing Training Data}
+We create an import automata like this
+\begin{python}
+def main(urd):
+  from datetime import datetime, timedelta
+
+  dt = datetime(2018, 1, 1)
+  previous = None
+  while dt < datetime(2018, 2, 1):
+    jid = urd.build('csvimport', options=dict(filename=dt.strftime + '.csv'), datasets=dict(previous=previous))
+    previous = jid
+\end{python}
+HUR GOR MAN DETTA ENKELT, MAN VILL HA EN KEY I URD PER FIL PA ETT ENKELT VIS.
+
+
+
+and a  training automaton
+\begin{python}
+def main(urd):
+  urd.begin('model/US', '2018-01-01')
+
+  # get training data
+  jid_imp = urd.latest('import/US').joblist.jobid
+  # get validation data
+  jid_val = urd.latest('validation/US').joblist.jobid
+  # build model
+  urd.build('model', imported_data)
+  # validate model
+  urd.build('validate, validate_data)
+
+  urd.end('model/US')
+\end{python}
+
+
+\begin{python}
+  [
+    ``categories/AU'',
+    ``categories/DE'',
+    ``categories/ES'',
+    ``categories/FR'',
+    ``categories/IT'',
+    ``categories/UK'',
+    ``categories/US'',
+    ``imp/AU'',
+    ``imp/DE'',
+    ``imp/ES'',
+    ``imp/FR'',
+    ``imp/IT'',
+    ``imp/UK'',
+    ``imp/US'',
+    ``model/AU_12800'',
+    ``model/AU_1600'',
+    ``model/AU_3200'',
+    ``model/DE_1600'',
+    ``model/DE_3200'',
+    ``model/ES_1600'',
+    ``model/ES_3200'',
+    ``model/FR_1600'',
+    ``model/FR_3200'',
+    ``model/IT_1600'',
+    ``model/IT_3200'',
+    ``model/UK_1600'',
+    ``model/UK_3200'',
+    ``model/US_1600'',
+    ``model/US_3200'',
+    ``testvectors/AU'',
+    ``testvectors/DE'',
+    ``testvectors/ES'',
+    ``testvectors/FR'',
+    ``testvectors/IT'',
+    ``testvectors/UK'',
+    ``testvectors/US''
+  ]
+\end{python}
+
+
+
+\begin{figure}[h!]
+  \begin{center}
+    \input{figures/example_model.pdftex_t}
+    \caption{caption here}
+    \label{}
+  \end{center}
+\end{figure}
 
 
 \clearpage
 \appendix
+
+
+
+Then we can retrieve a model from urd, and immediately find which traaining data thar waas used,
+as well aas validation data and its validated performance.  Good stuff.
+
 
 \section{Practicalities}
 
@@ -1597,7 +1708,8 @@ billion rows.
 
 
 
-% \clearpage
+
+
 
 % What it is
 
